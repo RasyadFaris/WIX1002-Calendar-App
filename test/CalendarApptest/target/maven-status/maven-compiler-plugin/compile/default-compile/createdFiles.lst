@@ -1,0 +1,13 @@
+com\mycompany\calendarapptest\model\ConsoleView.class
+com\mycompany\calendarapptest\model\Main.class
+com\mycompany\calendarapptest\model\BackupManager.class
+com\mycompany\calendarapptest\model\EventManager.class
+com\mycompany\calendarapptest\model\CalendarController.class
+com\mycompany\calendarapptest\model\StatsGenerator.class
+com\mycompany\calendarapptest\model\InputValidator.class
+com\mycompany\calendarapptest\model\RecurrentEvent.class
+com\mycompany\calendarapptest\model\Event.class
+com\mycompany\calendarapptest\model\FileManager.class
+com\mycompany\calendarapptest\model\SearchEngine.class
+com\mycompany\calendarapptest\model\RecurrenceLogic.class
+com\mycompany\calendarapptest\model\ConflictDetector.class
