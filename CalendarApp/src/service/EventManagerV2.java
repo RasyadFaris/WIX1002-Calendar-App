@@ -1,4 +1,4 @@
-package com.mycompany.calendarapptest.model;
+package service;
 
 import java.io.*;
 import java.time.LocalDateTime;
@@ -63,3 +63,4 @@ public class EventManagerV2 {
         return events;
     }
 }
+
