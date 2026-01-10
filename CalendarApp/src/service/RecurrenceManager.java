@@ -1,5 +1,7 @@
 package service; 
 
+import model.Event;
+import model.RecurrentEvent;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
