@@ -1,5 +1,7 @@
 package service;
 
+
+import model.Event;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -43,8 +45,8 @@ public class EventManager {
                         e.getId() + "," +
                         e.getTitle() + "," +
                         e.getDescription() + "," +
-                        e.getStart() + "," +
-                        e.getEnd()
+                        e.getstartDateTime() + "," +
+                        e.getendDateTime()
                 );
             }
         } catch (IOException e) {
