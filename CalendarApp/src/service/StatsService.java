@@ -26,7 +26,7 @@ public class StatsService {
 
     public long getTotalDurationInHours(List<Event> events) {
         return events.stream()
-            .mapToLong(e -> java.time.Duration.between(e.getStart(), e.getEnd()).toHours())
+            .mapToLong(e -> java.time.Duration.between(e.getstartDateTime(), e.getendDateTime()).toHours())
             .sum();
     }
 }
