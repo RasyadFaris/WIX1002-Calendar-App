@@ -12,7 +12,6 @@ public class EventManager {
     public EventManager() {
         loadEvents();
     }
-
     public void loadEvents() {
         events.clear();
 
@@ -35,7 +34,6 @@ public class EventManager {
             System.out.println("No existing events found.");
         }
     }
-
     public void saveEvents() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(EVENT_FILE))) {
             pw.println("eventId,title,description,startDateTime,endDateTime");
@@ -53,15 +51,11 @@ public class EventManager {
             System.out.println("Error saving events.");
         }
     }
-
     public void addEvent(Event event) {
         events.add(event);
         saveEvents();
     }
-
     public ArrayList<Event> getEvents() {
         return events;
     }
 }
-
-
