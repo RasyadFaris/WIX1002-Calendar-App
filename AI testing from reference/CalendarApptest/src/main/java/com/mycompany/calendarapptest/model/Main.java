@@ -13,7 +13,7 @@ public class Main {
         
         // Reminder check on launch
         LocalDateTime now = LocalDateTime.now();
-        var upcoming = controller.getEventsInRange(now, now.plusHours(24));
+        vaur upcoming = controller.getEventsInRange(now, now.plusHours(24));
         if (!upcoming.isEmpty()) {
             System.out.println("You have " + upcoming.size() + " events in the next 24 hours!");
         }
