@@ -1,63 +1,122 @@
 package service;
 
-
 import model.Event;
 import java.io.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 
 public class EventManager {
 
-    private static final String EVENT_FILE = "src/data/event.csv";
+    // Using "data/" is generally safer than "src/data/" for running jars later
+    private static final String EVENT_FILE = "data/event.csv"; 
     private final ArrayList<Event> events = new ArrayList<>();
 
     public EventManager() {
+        // Ensure the data directory exists before trying to load
+        File file = new File(EVENT_FILE);
+        if (file.getParentFile() != null) file.getParentFile().mkdirs();
+        
         loadEvents();
     }
+
+    // --- REQUIREMENT: loadEvents ---
     public void loadEvents() {
         events.clear();
+        File file = new File(EVENT_FILE);
+        
+        if (!file.exists()) return;
 
-        try (BufferedReader br = new BufferedReader(new FileReader(EVENT_FILE))) {
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             br.readLine(); // skip header
             String line;
 
             while ((line = br.readLine()) != null) {
+                if (line.trim().isEmpty()) continue; // skip empty lines
+
                 String[] p = line.split(",");
+                if (p.length < 5) continue; // basic validation
 
                 events.add(new Event(
-                        Integer.parseInt(p[0]),
-                        p[1],
-                        p[2],
-                        LocalDateTime.parse(p[3]),
-                        LocalDateTime.parse(p[4])
+                        Integer.parseInt(p[0].trim()),
+                        p[1].trim(),
+                        p[2].trim(),
+                        LocalDateTime.parse(p[3].trim()),
+                        LocalDateTime.parse(p[4].trim())
                 ));
             }
         } catch (IOException e) {
-            System.out.println("No existing events found.");
+            System.out.println("Error loading events: " + e.getMessage());
         }
     }
+
+    // --- REQUIREMENT: saveEvents ---
     public void saveEvents() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(EVENT_FILE))) {
             pw.println("eventId,title,description,startDateTime,endDateTime");
 
             for (Event e : events) {
-                pw.println(
-                        e.getId() + "," +
-                        e.getTitle() + "," +
-                        e.getDescription() + "," +
-                        e.getstartDateTime() + "," +
+                // Using the toCSV() method from your Event model is cleaner if available,
+                // otherwise strictly formatting it here ensures safety.
+                pw.println(String.format("%d,%s,%s,%s,%s",
+                        e.getId(),
+                        e.getTitle(),
+                        e.getDescription(),
+                        e.getstartDateTime(),
                         e.getendDateTime()
-                );
+                ));
             }
         } catch (IOException e) {
-            System.out.println("Error saving events.");
+            System.out.println("Error saving events: " + e.getMessage());
         }
     }
+
+    // --- REQUIREMENT: getNextEventId ---
+    public int getNextEventId() {
+        return events.stream()
+                .mapToInt(Event::getId)
+                .max()
+                .orElse(0) + 1;
+    }
+
+    // --- REQUIREMENT: addEvent ---
     public void addEvent(Event event) {
         events.add(event);
         saveEvents();
     }
-    public ArrayList<Event> getEvents() {
+
+    // --- REQUIREMENT: getAllEvent ---
+    public List<Event> getAllEvent() {
         return events;
+    }
+
+    // --- REQUIREMENT: findEventById ---
+    public Event findEventById(int id) {
+        return events.stream()
+                .filter(e -> e.getId() == id)
+                .findFirst()
+                .orElse(null);
+    }
+
+    // --- REQUIREMENT: deleteEvent ---
+    public boolean deleteEvent(int id) {
+        boolean removed = events.removeIf(e -> e.getId() == id);
+        if (removed) {
+            saveEvents();
+        }
+        return removed;
+    }
+
+    // --- REQUIREMENT: updateEvent ---
+    public boolean updateEvent(Event updatedEvent) {
+        for (int i = 0; i < events.size(); i++) {
+            if (events.get(i).getId() == updatedEvent.getId()) {
+                events.set(i, updatedEvent);
+                saveEvents();
+                return true;
+            }
+        }
+        return false;
     }
 }
