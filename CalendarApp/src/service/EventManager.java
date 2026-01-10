@@ -4,12 +4,12 @@ import java.io.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 
-public class EventManagerV2 {
+public class EventManager {
 
     private static final String EVENT_FILE = "src/data/event.csv";
     private final ArrayList<Event> events = new ArrayList<>();
 
-    public EventManagerV2() {
+    public EventManager() {
         loadEvents();
     }
 
@@ -63,4 +63,5 @@ public class EventManagerV2 {
         return events;
     }
 }
+
 
