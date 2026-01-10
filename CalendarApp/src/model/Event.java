@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class Event {
-    protected int eventID;
+    protected int eventId;
     protected String title;
     protected String description;
     protected LocalDateTime startDateTime;
@@ -12,15 +12,15 @@ public class Event {
 
     public static final DateTimeFormatter DATETIME_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
-    public Event(int eventID, String title, String description, LocalDateTime startDateTime, LocalDateTime endDateTime){
-        this.eventID = eventID;
+    public Event(int eventId, String title, String description, LocalDateTime startDateTime, LocalDateTime endDateTime){
+        this.eventId = eventId;
         this.title = title;
         this.description = description;
         this.startDateTime = startDateTime;
         this.endDateTime = endDateTime;
     }
     public int getId (){
-        return eventID;
+        return eventId;
     }
     public String getTitle (){
         return title;
@@ -28,10 +28,10 @@ public class Event {
     public String getDescription (){
         return description;
     }
-    public LocalDateTime get startDateTime () {
+    public LocalDateTime getstartDateTime () {
         return startDateTime;
     }
-    public LocalDateTime get endDateTime () {
+    public LocalDateTime getendDateTime () {
         return endDateTime;
     }
 
