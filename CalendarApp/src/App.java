@@ -1,9 +1,11 @@
-
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.stream.Collectors;
+import model.Event;
+import model.RecurrentEvent;
+import service.BackupService;
+import service.ConflictService;
+import service.EventManager;
+import service.RecurrenceManager;
+import service.SearchService;
+import service.StatsService;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -23,13 +25,23 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
+import java.io.File;
+import java.io.IOException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.YearMonth;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class App extends Application {
 
-    @SuppressWarnings("FieldMayBeFinal")
-    private CalendarController controller = new CalendarController();
+    // --- SERVICE LAYERS (Replaces CalendarController) ---
+    private final EventManager eventManager = new EventManager();
+    // RecurrenceManager needs existing events to link rules correctly
+    private final RecurrenceManager recurrenceManager = new RecurrenceManager(eventManager.getAllEvent());
+    private final StatsService statsService = new StatsService();
+
     private BorderPane menuPane = new BorderPane();    
     private LocalDate watchDate = LocalDate.now();
 
@@ -115,7 +127,7 @@ public class App extends Application {
         mainStage.show();
     }
 
-private VBox createCalendarView() {
+    private VBox createCalendarView() {
         VBox calendarLayout = new VBox(15);
         calendarLayout.setPadding(new Insets(20));
         calendarLayout.setAlignment(Pos.CENTER);
@@ -170,8 +182,10 @@ private VBox createCalendarView() {
             dayBox.getChildren().add(lblDayNum);
 
             LocalDate specificDate = watchDate.withDayOfMonth(day);
-            java.util.List<Event> dayEvents = controller.getAllEvents().stream()
-                .filter(e -> e.getStart().toLocalDate().equals(specificDate))
+            
+            // --- UPDATED: Use EventManager ---
+            List<Event> dayEvents = eventManager.getAllEvent().stream()
+                .filter(e -> e.getstartDateTime().toLocalDate().equals(specificDate))
                 .collect(Collectors.toList());
 
             for (Event e : dayEvents) {
@@ -206,7 +220,7 @@ private VBox createCalendarView() {
         descInput.setPromptText("Description");
         descInput.setMaxWidth(300);
 
-        DatePicker dateInput = new DatePicker(java.time.LocalDate.now());
+        DatePicker dateInput = new DatePicker(LocalDate.now());
         dateInput.setMaxWidth(300);
 
         HBox timeBox = new HBox(10);
@@ -242,21 +256,25 @@ private VBox createCalendarView() {
 
         saveBtn.setOnAction(e -> {
             try {
-                java.time.LocalDate date = dateInput.getValue();
-                java.time.LocalTime startT = java.time.LocalTime.parse(startTimeInput.getText());
-                java.time.LocalTime endT = java.time.LocalTime.parse(endTimeInput.getText());
-                java.time.LocalDateTime startDT = java.time.LocalDateTime.of(date, startT);
-                java.time.LocalDateTime endDT = java.time.LocalDateTime.of(date, endT);
+                LocalDate date = dateInput.getValue();
+                LocalTime startT = LocalTime.parse(startTimeInput.getText());
+                LocalTime endT = LocalTime.parse(endTimeInput.getText());
+                LocalDateTime startDT = LocalDateTime.of(date, startT);
+                LocalDateTime endDT = LocalDateTime.of(date, endT);
+
+                // --- UPDATED: Use EventManager for ID ---
+                int newId = eventManager.getNextEventId();
 
                 Event newEvent = new Event(
-                    controller.getNextId(),
+                    newId,
                     nameInput.getText(),
                     descInput.getText(),
                     startDT,
                     endDT
                 );
 
-                boolean hasConflict = ConflictDetector.hasConflict(newEvent, controller.getAllEvents());
+                // --- UPDATED: Use ConflictService ---
+                boolean hasConflict = ConflictService.isClashing(newEvent, eventManager.getAllEvent());
                 
                 if (hasConflict) {
                     statusLabel.setText("Time Conflict. You have another event at the same time.");
@@ -269,11 +287,15 @@ private VBox createCalendarView() {
                     String code = selectedStr.substring(selectedStr.indexOf("(") + 1, selectedStr.indexOf(")")); 
                     int count = Integer.parseInt(repeatCountInput.getText());
 
+                    // --- UPDATED: Create RecurrentEvent and Save to BOTH managers ---
                     RecurrentEvent re = new RecurrentEvent(newEvent, code, count, null);
-                    controller.addRecurrentEvent(re);
+                    
+                    eventManager.addEvent(re);             // Saves to event.csv
+                    recurrenceManager.addRecurrentEvent(re); // Saves to recurrent.csv
+                    
                     statusLabel.setText("Recurring Event Saved!");
                 } else {
-                    controller.addEvent(newEvent);
+                    eventManager.addEvent(newEvent);
                     statusLabel.setText("Event Saved!");
                 }
                 
@@ -282,6 +304,7 @@ private VBox createCalendarView() {
                 descInput.clear();
 
             } catch (Exception ex) {
+                ex.printStackTrace(); // Helpful for debugging
                 statusLabel.setText("Error: Check time format (HH:mm) or numbers.");
                 statusLabel.setStyle("-fx-text-fill: red;");
             }
@@ -319,7 +342,8 @@ private VBox createCalendarView() {
         eventList.setMaxWidth(400);
         eventList.setMaxHeight(300);
 
-        refreshEventList(eventList, controller.getAllEvents());
+        // --- UPDATED: Use EventManager ---
+        refreshEventList(eventList, eventManager.getAllEvent());
 
         Label statusLabel = new Label("");
         statusLabel.setStyle("-fx-text-fill: red;");
@@ -329,13 +353,14 @@ private VBox createCalendarView() {
         
         searchBtn.setOnAction(e -> {
             String query = searchInput.getText();
-            java.util.List<Event> results = SearchEngine.searchByTitle(controller.getAllEvents(), query);
+            // --- UPDATED: Use SearchService ---
+            List<Event> results = SearchService.searchByTitle(eventManager.getAllEvent(), query);
             refreshEventList(eventList, results);
         });
 
         clearBtn.setOnAction(e -> {
             searchInput.clear();
-            refreshEventList(eventList, controller.getAllEvents());
+            refreshEventList(eventList, eventManager.getAllEvent());
         });
 
         deleteBtn.setOnAction(e -> {
@@ -347,10 +372,11 @@ private VBox createCalendarView() {
                     String idStr = selectedItem.substring(1, endIndex);
                     int idToDelete = Integer.parseInt(idStr);
 
-                    controller.deleteEvent(idToDelete);
+                    // --- UPDATED: Use EventManager delete ---
+                    eventManager.deleteEvent(idToDelete);
                     
                     searchInput.clear();
-                    refreshEventList(eventList, controller.getAllEvents());
+                    refreshEventList(eventList, eventManager.getAllEvent());
                     statusLabel.setText("Event deleted.");
                     statusLabel.setStyle("-fx-text-fill: green;");
                     
@@ -367,7 +393,7 @@ private VBox createCalendarView() {
         return eventslayout;
     }
 
-    private void refreshEventList(ListView<String> list, java.util.List<Event> data) {
+    private void refreshEventList(ListView<String> list, List<Event> data) {
         list.getItems().clear();
         
         if (data.isEmpty()) {
@@ -377,9 +403,9 @@ private VBox createCalendarView() {
                 String displayStr = String.format("[%d] %s (%s @ %s - %s)", 
                     e.getId(), 
                     e.getTitle(), 
-                    e.getStart().toLocalDate(),
-                    e.getStart().toLocalTime(),
-                    e.getEnd().toLocalTime()
+                    e.getstartDateTime().toLocalDate(),
+                    e.getstartDateTime().toLocalTime(),
+                    e.getendDateTime().toLocalTime()
                 );
                 list.getItems().add(displayStr);
             }
@@ -411,7 +437,8 @@ private VBox createCalendarView() {
 
             if (selectedDirectory != null) {
                 try {
-                    BackupManager.backup(selectedDirectory.getAbsolutePath());
+                    // --- UPDATED: Use BackupService ---
+                    BackupService.backup(selectedDirectory.getAbsolutePath());
                     statusLabel.setText("Backup Success: " + selectedDirectory.getName());
                     statusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
                 } catch (IOException ex) {
@@ -431,8 +458,14 @@ private VBox createCalendarView() {
 
             if (selectedDirectory != null) {
                 try {
-                    BackupManager.restore(selectedDirectory.getAbsolutePath());
-                    statusLabel.setText("Restore Success! Please restart app.");
+                    // --- UPDATED: Use BackupService ---
+                    BackupService.restore(selectedDirectory.getAbsolutePath());
+                    
+                    // Reload data from file after restore
+                    eventManager.loadEvents(); 
+                    recurrenceManager.loadRecurrentEvents(eventManager.getAllEvent());
+                    
+                    statusLabel.setText("Restore Success! Please restart app or navigate away.");
                     statusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
                 } catch (IOException ex) {
                     statusLabel.setText("Restore Failed: Files not found.");
@@ -454,25 +487,19 @@ private VBox createCalendarView() {
         Label titleLabel = new Label("Event Statistics");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #333;");
 
-        java.util.List<Event> allEvents = controller.getAllEvents();
-        int total = allEvents.size();
+        List<Event> allEvents = eventManager.getAllEvent();
 
-        Label totalLabel = new Label("Total Events Tracked: " + total);
+        // --- UPDATED: Use StatsService methods ---
+        Label totalLabel = new Label("Total Events Tracked: " + statsService.getTotalEventCount(allEvents));
         totalLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        Label busyLabel = new Label("Busiest Day: Calculating...");
+        String busiestDay = statsService.getBusiestDayOfWeek(allEvents);
+        Label busyLabel = new Label("Busiest Day: " + busiestDay);
         busyLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #555;");
-
-        if (!allEvents.isEmpty()) {
-            Map<String, Long> dayCounts = allEvents.stream()
-                .collect(Collectors.groupingBy(e -> e.getStart().getDayOfWeek().toString(), Collectors.counting()));
-            
-            dayCounts.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .ifPresent(e -> busyLabel.setText("Busiest Day: " + e.getKey() + " (" + e.getValue() + " events)"));
-        } else {
-            busyLabel.setText("Busiest Day: N/A (No events yet)");
-        }
+        
+        // Added extra stat just because we have the service now
+        Label avgDurationLabel = new Label("Avg Duration: " + String.format("%.0f min", statsService.getAverageEventDuration(allEvents)));
+        avgDurationLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #777;");
 
         Button refreshBtn = new Button("Refresh Stats");
         refreshBtn.setStyle("-fx-background-color: #00c3ff; -fx-text-fill: white; -fx-font-weight: bold;");
@@ -480,7 +507,7 @@ private VBox createCalendarView() {
             menuPane.setCenter(createStatsPage()); 
         });
 
-        layout.getChildren().addAll(titleLabel, totalLabel, busyLabel, refreshBtn);
+        layout.getChildren().addAll(titleLabel, totalLabel, busyLabel, avgDurationLabel, refreshBtn);
         return layout;
     }
 
