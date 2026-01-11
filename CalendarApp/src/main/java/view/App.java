@@ -48,6 +48,12 @@ public class App extends Application {
     @Override
     public void start(Stage mainStage) {
 
+        try {
+            recurrenceManager.loadRecurrentEvents(eventManager.getAllEvent());
+        } catch (Exception e) {
+            System.out.println("Could not load recurring events (File might be empty or missing): " + e.getMessage());
+        }
+
         VBox menuBox = new VBox();
 
         HBox headerBox = new HBox(15);
