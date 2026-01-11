@@ -1,17 +1,19 @@
 package view;
-import model.Event;
-import model.RecurrentEvent;
-import service.BackupService;
-import service.ConflictService;
-import service.EventManager;
-import service.RecurrenceManager;
-import service.SearchService;
-import service.StatsService;
+
+import java.io.File;
+import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.YearMonth;
+import java.util.List;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ComboBox;
@@ -25,16 +27,14 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
-
-import java.io.File;
-import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
+import model.Event;
+import model.RecurrentEvent;
+import service.BackupService;
+import service.ConflictService;
+import service.EventManager;
+import service.RecurrenceManager;
+import service.SearchService;
+import service.StatsService;
 
 public class App extends Application {
 
@@ -69,41 +69,41 @@ public class App extends Application {
         optionsBox.setStyle("-fx-background-color: #80d9f4;");
         optionsBox.setAlignment(Pos.CENTER);
 
-        String buttonStyle = "-fx-background-color: #ffffff;";
+        String buttonStyle = "-fx-background-color: #ffffff; -fx-min-width: 150px;";
 
         Button calendarButton = new Button("View Calendar");
         calendarButton.setStyle(buttonStyle);
         calendarButton.setOnAction(event -> {
             menuPane.setCenter(createCalendarView());
-            menuBox.getChildren().remove(optionsBox);
+            if(menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
         });
 
         Button addEventBtn = new Button("Add Event");
         addEventBtn.setStyle(buttonStyle);
         addEventBtn.setOnAction(event -> {
             menuPane.setCenter(createAddEventPage());
-            menuBox.getChildren().remove(optionsBox);
+            if(menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
         });
 
         Button viewEventsBtn = new Button("View Events");
         viewEventsBtn.setStyle(buttonStyle);
         viewEventsBtn.setOnAction(event-> {
             menuPane.setCenter(createViewEventsPage());
-            menuBox.getChildren().remove(optionsBox);
+            if(menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
         });
         
         Button statsBtn = new Button("Statistics");
         statsBtn.setStyle(buttonStyle);
         statsBtn.setOnAction(event -> {
             menuPane.setCenter(createStatsPage());
-            menuBox.getChildren().remove(optionsBox);
+            if(menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
         });
 
         Button settingsBtn = new Button("Settings");
         settingsBtn.setStyle(buttonStyle);
         settingsBtn.setOnAction(event-> {
             menuPane.setCenter(createSettingsPage(mainStage));
-            menuBox.getChildren().remove(optionsBox);
+            if(menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
         });
 
         optionsBox.getChildren().addAll(calendarButton, addEventBtn, viewEventsBtn, statsBtn, settingsBtn);
@@ -129,14 +129,20 @@ public class App extends Application {
 
     private VBox createCalendarView() {
         VBox calendarLayout = new VBox(15);
-        calendarLayout.setPadding(new Insets(20));
+        
+        // --- THIS MATCHES THE STYLE OF OTHER PAGES NOW ---
+        calendarLayout.setPadding(new Insets(30)); 
         calendarLayout.setAlignment(Pos.CENTER);
+        calendarLayout.setStyle("-fx-background-color: #f0f8ff;"); 
+        // --------------------------------------------------
 
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER);
         
+        // Reverted buttons to original style
         Button btnPrev = new Button("<");
         Button btnNext = new Button(">");
+        
         Label lblMonth = new Label(watchDate.getMonth().toString() + " " + watchDate.getYear());
         lblMonth.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
@@ -153,13 +159,14 @@ public class App extends Application {
 
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
-        grid.setHgap(10);
-        grid.setVgap(10);
+        grid.setHgap(5);
+        grid.setVgap(5);
 
         String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
         for (int i = 0; i < 7; i++) {
             Label dayLabel = new Label(days[i]);
-            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-min-width: 90; -fx-alignment: center;");
+            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-alignment: center;");
+            dayLabel.setMinWidth(100);
             grid.add(dayLabel, i, 0);
         }
 
@@ -176,39 +183,44 @@ public class App extends Application {
 
             VBox dayBox = new VBox(2);
             dayBox.setAlignment(Pos.TOP_LEFT);
-            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 110; -fx-min-height: 80; -fx-background-color: white;");
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 2; -fx-min-width: 100; -fx-min-height: 60; -fx-background-color: white;");
             
             Label lblDayNum = new Label(String.valueOf(day));
-            lblDayNum.setStyle("-fx-font-weight: bold;");
+            lblDayNum.setStyle("-fx-font-weight: bold; -fx-font-size: 10px;");
             dayBox.getChildren().add(lblDayNum);
 
             LocalDate gridDate = watchDate.withDayOfMonth(day);
             
-            List<Event> dayEvents = new ArrayList<>();
-            for (Event e : eventManager.getAllEvent()) {
+            List<Event> allEvents = eventManager.getAllEvent();
+            for (Event e : allEvents) {
                 if (e instanceof RecurrentEvent) {
-                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
-                    for (Event occ : occurrences) {
-                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
-                            dayEvents.add(occ);
-                        }
+                    try {
+                         List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
+                         for (Event occ : occurrences) {
+                             if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
+                                 addEventLabel(dayBox, occ);
+                             }
+                         }
+                    } catch (Exception ex) {
+                        // ignore
                     }
                 } else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
-                    dayEvents.add(e);
+                    addEventLabel(dayBox, e);
                 }
-            }
-
-            for (Event e : dayEvents) {
-                Label eventLabel = new Label("• " + e.getTitle());
-                eventLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bbd;");
-                dayBox.getChildren().add(eventLabel);
             }
 
             grid.add(dayBox, col, row);
         }
 
+        // Reverted children (Removed the 'Title' I added)
         calendarLayout.getChildren().addAll(header, grid);
         return calendarLayout;
+    }
+
+    private void addEventLabel(VBox container, Event e) {
+        Label eventLabel = new Label("• " + e.getTitle());
+        eventLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #007bbd;");
+        container.getChildren().add(eventLabel);
     }
    
     private VBox createAddEventPage() {
@@ -270,22 +282,13 @@ public class App extends Application {
                 LocalDateTime startDT = LocalDateTime.of(date, startT);
                 LocalDateTime endDT = LocalDateTime.of(date, endT);
 
-                // --- UPDATED: Use EventManager for ID ---
                 int newId = eventManager.getNextEventId();
 
-                Event newEvent = new Event(
-                    newId,
-                    nameInput.getText(),
-                    descInput.getText(),
-                    startDT,
-                    endDT
-                );
+                Event newEvent = new Event(newId, nameInput.getText(), descInput.getText(), startDT, endDT);
 
-                // --- UPDATED: Use ConflictService ---
                 boolean hasConflict = ConflictService.isClashing(newEvent, eventManager.getAllEvent());
-                
                 if (hasConflict) {
-                    statusLabel.setText("Time Conflict. You have another event at the same time.");
+                    statusLabel.setText("Time Conflict!");
                     statusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
                     return; 
                 }
@@ -295,11 +298,10 @@ public class App extends Application {
                     String code = selectedStr.substring(selectedStr.indexOf("(") + 1, selectedStr.indexOf(")")); 
                     int count = Integer.parseInt(repeatCountInput.getText());
 
-                    // --- UPDATED: Create RecurrentEvent and Save to BOTH managers ---
                     RecurrentEvent re = new RecurrentEvent(newEvent, code, count, null);
                     
-                    eventManager.addEvent(re);             // Saves to event.csv
-                    recurrenceManager.addRecurrentEvent(re); // Saves to recurrent.csv
+                    eventManager.addEvent(re); 
+                    recurrenceManager.addRecurrentEvent(re); 
                     
                     statusLabel.setText("Recurring Event Saved!");
                 } else {
@@ -312,8 +314,8 @@ public class App extends Application {
                 descInput.clear();
 
             } catch (Exception ex) {
-                ex.printStackTrace(); // Helpful for debugging
-                statusLabel.setText("Error: Check time format (HH:mm) or numbers.");
+                ex.printStackTrace();
+                statusLabel.setText("Error: Check time (HH:mm) or numbers.");
                 statusLabel.setStyle("-fx-text-fill: red;");
             }
         });
@@ -347,21 +349,17 @@ public class App extends Application {
         searchBox.getChildren().addAll(searchInput, searchBtn, clearBtn);
 
         ListView<String> eventList = new ListView<>();
-        eventList.setMaxWidth(400);
+        eventList.setMaxWidth(500);
         eventList.setMaxHeight(300);
 
-        // --- UPDATED: Use EventManager ---
         refreshEventList(eventList, eventManager.getAllEvent());
 
         Label statusLabel = new Label("");
-        statusLabel.setStyle("-fx-text-fill: red;");
-
         Button deleteBtn = new Button("Delete Selected Event");
         deleteBtn.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-font-weight: bold;");
         
         searchBtn.setOnAction(e -> {
             String query = searchInput.getText();
-            // --- UPDATED: Use SearchService ---
             List<Event> results = SearchService.searchByTitle(eventManager.getAllEvent(), query);
             refreshEventList(eventList, results);
         });
@@ -373,27 +371,22 @@ public class App extends Application {
 
         deleteBtn.setOnAction(e -> {
             String selectedItem = eventList.getSelectionModel().getSelectedItem();
-            
             if (selectedItem != null && !selectedItem.equals("No events found.")) {
                 try {
                     int endIndex = selectedItem.indexOf("]");
-                    String idStr = selectedItem.substring(1, endIndex);
-                    int idToDelete = Integer.parseInt(idStr);
-
-                    // --- UPDATED: Use EventManager delete ---
-                    eventManager.deleteEvent(idToDelete);
-                    
-                    searchInput.clear();
-                    refreshEventList(eventList, eventManager.getAllEvent());
-                    statusLabel.setText("Event deleted.");
-                    statusLabel.setStyle("-fx-text-fill: green;");
-                    
+                    if(endIndex != -1) {
+                        String idStr = selectedItem.substring(1, endIndex);
+                        int idToDelete = Integer.parseInt(idStr);
+                        eventManager.deleteEvent(idToDelete);
+                        refreshEventList(eventList, eventManager.getAllEvent());
+                        statusLabel.setText("Event deleted.");
+                        statusLabel.setStyle("-fx-text-fill: green;");
+                    }
                 } catch (Exception ex) {
                     statusLabel.setText("Error deleting event.");
                 }
             } else {
                 statusLabel.setText("Please select an event to delete.");
-                statusLabel.setStyle("-fx-text-fill: orange;");
             }
         });
 
@@ -408,14 +401,32 @@ public class App extends Application {
             list.getItems().add("No events found.");
         } else {
             for (Event e : data) {
-                String displayStr = String.format("[%d] %s (%s @ %s - %s)", 
-                    e.getId(), 
-                    e.getTitle(), 
-                    e.getstartDateTime().toLocalDate(),
-                    e.getstartDateTime().toLocalTime(),
-                    e.getendDateTime().toLocalTime()
-                );
-                list.getItems().add(displayStr);
+                if (e instanceof RecurrentEvent) {
+                    try {
+                        List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
+                        for (Event occ : occurrences) {
+                            String displayStr = String.format("[%d] (Repeat) %s (%s @ %s - %s)", 
+                                e.getId(),
+                                occ.getTitle(), 
+                                occ.getstartDateTime().toLocalDate(),
+                                occ.getstartDateTime().toLocalTime(),
+                                occ.getendDateTime().toLocalTime()
+                            );
+                            list.getItems().add(displayStr);
+                        }
+                    } catch (Exception ex) {
+                         // Ignore
+                    }
+                } else {
+                    String displayStr = String.format("[%d] %s (%s @ %s - %s)", 
+                        e.getId(), 
+                        e.getTitle(), 
+                        e.getstartDateTime().toLocalDate(),
+                        e.getstartDateTime().toLocalTime(),
+                        e.getendDateTime().toLocalTime()
+                    );
+                    list.getItems().add(displayStr);
+                }
             }
         }
     }
@@ -430,13 +441,10 @@ public class App extends Application {
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #333;");
 
         Label descLabel = new Label("Backup your event data to a folder or restore from a previous save.");
-        descLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #666;");
-
         Label statusLabel = new Label("Ready");
-        statusLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: grey;");
-
+        
         Button backupBtn = new Button("Backup Data");
-        backupBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;");
+        backupBtn.setStyle("-fx-background-color: #2ecc71; -fx-text-fill: white; -fx-font-weight: bold;");
         
         backupBtn.setOnAction(e -> {
             DirectoryChooser chooser = new DirectoryChooser();
@@ -445,10 +453,9 @@ public class App extends Application {
 
             if (selectedDirectory != null) {
                 try {
-                    // --- UPDATED: Use BackupService ---
                     BackupService.backup(selectedDirectory.getAbsolutePath());
-                    statusLabel.setText("Backup Success: " + selectedDirectory.getName());
-                    statusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+                    statusLabel.setText("Backup Success to: " + selectedDirectory.getName());
+                    statusLabel.setStyle("-fx-text-fill: green;");
                 } catch (IOException ex) {
                     statusLabel.setText("Backup Failed: " + ex.getMessage());
                     statusLabel.setStyle("-fx-text-fill: red;");
@@ -457,7 +464,7 @@ public class App extends Application {
         });
 
         Button restoreBtn = new Button("Restore Data");
-        restoreBtn.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 14px;");
+        restoreBtn.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-weight: bold;");
         
         restoreBtn.setOnAction(e -> {
             DirectoryChooser chooser = new DirectoryChooser();
@@ -466,17 +473,21 @@ public class App extends Application {
 
             if (selectedDirectory != null) {
                 try {
-                    // --- UPDATED: Use BackupService ---
                     BackupService.restore(selectedDirectory.getAbsolutePath());
                     
-                    // Reload data from file after restore
                     eventManager.loadEvents(); 
                     recurrenceManager.loadRecurrentEvents(eventManager.getAllEvent());
                     
-                    statusLabel.setText("Restore Success! Please restart app or navigate away.");
-                    statusLabel.setStyle("-fx-text-fill: green; -fx-font-weight: bold;");
+                    statusLabel.setText("Restore Success! Data reloaded.");
+                    statusLabel.setStyle("-fx-text-fill: green;");
+                    
+                    Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setTitle("Restore Complete");
+                    alert.setContentText("Data restored successfully. Please go to View Calendar to see changes.");
+                    alert.showAndWait();
+
                 } catch (IOException ex) {
-                    statusLabel.setText("Restore Failed: Files not found.");
+                    statusLabel.setText("Restore Failed: " + ex.getMessage());
                     statusLabel.setStyle("-fx-text-fill: red;");
                 }
             }
@@ -497,17 +508,13 @@ public class App extends Application {
 
         List<Event> allEvents = eventManager.getAllEvent();
 
-        // --- UPDATED: Use StatsService methods ---
         Label totalLabel = new Label("Total Events Tracked: " + statsService.getTotalEventCount(allEvents));
         totalLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
         String busiestDay = statsService.getBusiestDayOfWeek(allEvents);
         Label busyLabel = new Label("Busiest Day: " + busiestDay);
-        busyLabel.setStyle("-fx-font-size: 16px; -fx-text-fill: #555;");
         
-        // Added extra stat just because we have the service now
         Label avgDurationLabel = new Label("Avg Duration: " + String.format("%.0f min", statsService.getAverageEventDuration(allEvents)));
-        avgDurationLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #777;");
 
         Button refreshBtn = new Button("Refresh Stats");
         refreshBtn.setStyle("-fx-background-color: #00c3ff; -fx-text-fill: white; -fx-font-weight: bold;");
