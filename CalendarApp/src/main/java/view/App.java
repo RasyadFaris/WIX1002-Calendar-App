@@ -32,6 +32,7 @@ import model.RecurrentEvent;
 import service.BackupService;
 import service.ConflictService;
 import service.EventManager;
+import service.NotificationService;
 import service.RecurrenceManager;
 import service.SearchService;
 import service.StatsService;
@@ -41,17 +42,28 @@ public class App extends Application {
     private final EventManager eventManager = new EventManager();
     private final RecurrenceManager recurrenceManager = new RecurrenceManager(eventManager.getAllEvent());
     private final StatsService statsService = new StatsService();
+    private final NotificationService notificationService = new NotificationService();
 
     private BorderPane menuPane = new BorderPane();    
     private LocalDate watchDate = LocalDate.now();
 
     @Override
     public void start(Stage mainStage) {
+        List<Event> upcoming = notificationService.getUpcomingEvents(eventManager.getAllEvent());
 
-        try {
-            recurrenceManager.loadRecurrentEvents(eventManager.getAllEvent());
-        } catch (Exception e) {
-            System.out.println("Could not load recurring events (File might be empty or missing): " + e.getMessage());
+        if (!upcoming.isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Reminder");
+            alert.setHeaderText("Upcoming Events (Next 24h)");
+        
+        // Simple loop to list names
+            String message = "";
+            for (Event e : upcoming) {
+            message += "- " + e.getTitle() + "\n";
+            }
+        
+        alert.setContentText(message);
+        alert.showAndWait();
         }
 
         VBox menuBox = new VBox();
@@ -87,7 +99,7 @@ public class App extends Application {
         Button addEventBtn = new Button("Add Event");
         addEventBtn.setStyle(buttonStyle);
         addEventBtn.setOnAction(event -> {
-            menuPane.setCenter(createAddEventPage());
+            menuPane.setCenter(createAddEventPage(null));
             if(menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
         });
 
@@ -136,11 +148,10 @@ public class App extends Application {
     private VBox createCalendarView() {
         VBox calendarLayout = new VBox(15);
         
-        // --- THIS MATCHES THE STYLE OF OTHER PAGES NOW ---
         calendarLayout.setPadding(new Insets(30)); 
         calendarLayout.setAlignment(Pos.CENTER);
         calendarLayout.setStyle("-fx-background-color: #f0f8ff;"); 
-        // --------------------------------------------------
+
 
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER);
@@ -198,19 +209,18 @@ public class App extends Application {
             LocalDate gridDate = watchDate.withDayOfMonth(day);
             
             List<Event> allEvents = eventManager.getAllEvent();
+
             for (Event e : allEvents) {
                 if (e instanceof RecurrentEvent) {
-                    try {
-                         List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
-                         for (Event occ : occurrences) {
-                             if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
-                                 addEventLabel(dayBox, occ);
-                             }
-                         }
-                    } catch (Exception ex) {
-                        // ignore
+                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
+                    
+                    for (Event occ : occurrences) {
+                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
+                            addEventLabel(dayBox, occ);
+                        }
                     }
-                } else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
+                } 
+                else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
                     addEventLabel(dayBox, e);
                 }
             }
@@ -218,7 +228,6 @@ public class App extends Application {
             grid.add(dayBox, col, row);
         }
 
-        // Reverted children (Removed the 'Title' I added)
         calendarLayout.getChildren().addAll(header, grid);
         return calendarLayout;
     }
@@ -229,13 +238,18 @@ public class App extends Application {
         container.getChildren().add(eventLabel);
     }
    
-    private VBox createAddEventPage() {
+    // REPLACES existing createAddEventPage()
+// NOW ACCEPTS AN ARGUMENT: Event eventToEdit
+    private VBox createAddEventPage(Event eventToEdit) {
         VBox formLayout = new VBox(15);
         formLayout.setPadding(new Insets(30));
         formLayout.setAlignment(Pos.CENTER);
         formLayout.setStyle("-fx-background-color: #f0f8ff;");
 
-        Label titleLabel = new Label("Create New Event");
+        // 1. Check Mode: Are we editing?
+        boolean isEditing = (eventToEdit != null);
+        
+        Label titleLabel = new Label(isEditing ? "Edit Event" : "Create New Event");
         titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #333;");
 
         TextField nameInput = new TextField();
@@ -257,6 +271,7 @@ public class App extends Application {
         endTimeInput.setMaxWidth(100);
         timeBox.getChildren().addAll(new Label("Time:"), startTimeInput, new Label("to"), endTimeInput);
 
+        // Recurrence UI
         CheckBox recurCheckBox = new CheckBox("Repeat this event?");
         VBox recurOptions = new VBox(10);
         recurOptions.setAlignment(Pos.CENTER);
@@ -276,10 +291,33 @@ public class App extends Application {
             recurOptions.setVisible(recurCheckBox.isSelected());
         });
 
+        // 2. PRE-FILL DATA IF EDITING
+        if (isEditing) {
+            nameInput.setText(eventToEdit.getTitle());
+            descInput.setText(eventToEdit.getDescription());
+            dateInput.setValue(eventToEdit.getstartDateTime().toLocalDate());
+            startTimeInput.setText(eventToEdit.getstartDateTime().toLocalTime().toString());
+            endTimeInput.setText(eventToEdit.getendDateTime().toLocalTime().toString());
+            
+            // Check if it was a repeating event
+            if (eventToEdit instanceof RecurrentEvent) {
+                RecurrentEvent re = (RecurrentEvent) eventToEdit;
+                recurCheckBox.setSelected(true);
+                recurOptions.setVisible(true);
+                repeatCountInput.setText(String.valueOf(re.getRepeatCount()));
+                
+                String code = re.getInterval();
+                if (code.equals("1d")) intervalBox.setValue("Daily (1d)");
+                else if (code.equals("1w")) intervalBox.setValue("Weekly (1w)");
+                else if (code.equals("1m")) intervalBox.setValue("Monthly (1m)");
+            }
+        }
+
         Label statusLabel = new Label("");
-        Button saveBtn = new Button("Save Event");
+        Button saveBtn = new Button(isEditing ? "Update Event" : "Save Event");
         saveBtn.setStyle("-fx-background-color: #00c3ff; -fx-text-fill: white; -fx-font-weight: bold;");
 
+        // 3. SAVE LOGIC
         saveBtn.setOnAction(e -> {
             try {
                 LocalDate date = dateInput.getValue();
@@ -288,40 +326,49 @@ public class App extends Application {
                 LocalDateTime startDT = LocalDateTime.of(date, startT);
                 LocalDateTime endDT = LocalDateTime.of(date, endT);
 
-                int newId = eventManager.getNextEventId();
+                int eventId = isEditing ? eventToEdit.getId() : eventManager.getNextEventId();
 
-                Event newEvent = new Event(newId, nameInput.getText(), descInput.getText(), startDT, endDT);
+                Event finalEvent = new Event(eventId, nameInput.getText(), descInput.getText(), startDT, endDT);
 
-                boolean hasConflict = ConflictService.isClashing(newEvent, eventManager.getAllEvent());
-                if (hasConflict) {
-                    statusLabel.setText("Time Conflict!");
-                    statusLabel.setStyle("-fx-text-fill: red; -fx-font-weight: bold;");
-                    return; 
+                if (!isEditing) {
+                    boolean hasConflict = ConflictService.isClashing(finalEvent, eventManager.getAllEvent());
+                    if (hasConflict) {
+                        statusLabel.setText("Time Conflict!");
+                        statusLabel.setStyle("-fx-text-fill: red;");
+                        return;
+                    }
                 }
 
                 if (recurCheckBox.isSelected()) {
                     String selectedStr = intervalBox.getValue();
                     String code = selectedStr.substring(selectedStr.indexOf("(") + 1, selectedStr.indexOf(")")); 
                     int count = Integer.parseInt(repeatCountInput.getText());
-
-                    RecurrentEvent re = new RecurrentEvent(newEvent, code, count, null);
                     
-                    eventManager.addEvent(re); 
-                    recurrenceManager.addRecurrentEvent(re); 
+                    RecurrentEvent re = new RecurrentEvent(finalEvent, code, count, null);
                     
-                    statusLabel.setText("Recurring Event Saved!");
+                    if (isEditing) {
+                        eventManager.updateEvent(re); 
+                    } else {
+                        eventManager.addEvent(re); 
+                        recurrenceManager.addRecurrentEvent(re);
+                    }
                 } else {
-                    eventManager.addEvent(newEvent);
-                    statusLabel.setText("Event Saved!");
+                    if (isEditing) {
+                        eventManager.updateEvent(finalEvent);
+                        statusLabel.setText("Event Updated!");
+                    } else {
+                        eventManager.addEvent(finalEvent);
+                        statusLabel.setText("Event Saved!");
+                    }
                 }
                 
                 statusLabel.setStyle("-fx-text-fill: green;");
-                nameInput.clear(); 
-                descInput.clear();
+                if (!isEditing) {
+                    nameInput.clear(); descInput.clear();
+                }
 
             } catch (Exception ex) {
-                ex.printStackTrace();
-                statusLabel.setText("Error: Check time (HH:mm) or numbers.");
+                statusLabel.setText("Error: Check inputs.");
                 statusLabel.setStyle("-fx-text-fill: red;");
             }
         });
@@ -361,8 +408,37 @@ public class App extends Application {
         refreshEventList(eventList, eventManager.getAllEvent());
 
         Label statusLabel = new Label("");
+        Button editBtn = new Button("Edit Selected");
+        editBtn.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
+        
+        editBtn.setOnAction(e -> {
+            String selectedItem = eventList.getSelectionModel().getSelectedItem();
+            if (selectedItem != null && !selectedItem.equals("No events found.")) {
+                try {
+                    int endIndex = selectedItem.indexOf("]");
+                    if(endIndex != -1) {
+                        String idStr = selectedItem.substring(1, endIndex);
+                        int idToEdit = Integer.parseInt(idStr);
+                        
+                        Event eventToEdit = eventManager.findEventById(idToEdit);
+                        
+                        if (eventToEdit != null) {
+                            menuPane.setCenter(createAddEventPage(eventToEdit));
+                        }
+                    }
+                } catch (Exception ex) {
+                    statusLabel.setText("Error opening edit page.");
+                }
+            } else {
+                statusLabel.setText("Please select an event to edit.");
+                statusLabel.setStyle("-fx-text-fill: orange;");
+            }
+        });
+
         Button deleteBtn = new Button("Delete Selected Event");
         deleteBtn.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-font-weight: bold;");
+        
+
         
         searchBtn.setOnAction(e -> {
             String query = searchInput.getText();
@@ -407,23 +483,22 @@ public class App extends Application {
             list.getItems().add("No events found.");
         } else {
             for (Event e : data) {
+                // Logic: Expand repeating events so user sees all of them
                 if (e instanceof RecurrentEvent) {
-                    try {
-                        List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
-                        for (Event occ : occurrences) {
-                            String displayStr = String.format("[%d] (Repeat) %s (%s @ %s - %s)", 
-                                e.getId(),
-                                occ.getTitle(), 
-                                occ.getstartDateTime().toLocalDate(),
-                                occ.getstartDateTime().toLocalTime(),
-                                occ.getendDateTime().toLocalTime()
-                            );
-                            list.getItems().add(displayStr);
-                        }
-                    } catch (Exception ex) {
-                         // Ignore
+                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
+                    for (Event occ : occurrences) {
+                        // Add "(Repeat)" so user knows why it's there
+                        String displayStr = String.format("[%d] (Repeat) %s (%s @ %s - %s)", 
+                            e.getId(),
+                            occ.getTitle(), 
+                            occ.getstartDateTime().toLocalDate(),
+                            occ.getstartDateTime().toLocalTime(),
+                            occ.getendDateTime().toLocalTime()
+                        );
+                        list.getItems().add(displayStr);
                     }
                 } else {
+                    // Normal Event
                     String displayStr = String.format("[%d] %s (%s @ %s - %s)", 
                         e.getId(), 
                         e.getTitle(), 
@@ -504,7 +579,7 @@ public class App extends Application {
     }
 
     private VBox createStatsPage() {
-        VBox layout = new VBox(20);
+        VBox layout = new VBox(15);
         layout.setPadding(new Insets(30));
         layout.setAlignment(Pos.CENTER);
         layout.setStyle("-fx-background-color: #f0f8ff;");
@@ -514,13 +589,21 @@ public class App extends Application {
 
         List<Event> allEvents = eventManager.getAllEvent();
 
-        Label totalLabel = new Label("Total Events Tracked: " + statsService.getTotalEventCount(allEvents));
-        totalLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        Label totalLbl = new Label("Total Events: " + statsService.getTotalEventCount(allEvents));
+        totalLbl.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
 
-        String busiestDay = statsService.getBusiestDayOfWeek(allEvents);
-        Label busyLabel = new Label("Busiest Day: " + busiestDay);
-        
-        Label avgDurationLabel = new Label("Avg Duration: " + String.format("%.0f min", statsService.getAverageEventDuration(allEvents)));
+        Label busyDayLbl = new Label("Busiest Day: " + statsService.getBusiestDayOfWeek(allEvents));
+        busyDayLbl.setStyle("-fx-font-size: 14px;");
+
+        Label busyMonthLbl = new Label("Busiest Month: " + statsService.getBusiestMonth(allEvents));
+        busyMonthLbl.setStyle("-fx-font-size: 14px;");
+
+        Label freqLbl = new Label("Most Frequent: " + statsService.getMostFrequentEvent(allEvents));
+        freqLbl.setStyle("-fx-font-size: 14px;");
+            
+        String avgDur = String.format("%.2f", statsService.getAverageEventDuration(allEvents));
+        Label avgDurLbl = new Label("Average Duration: " + avgDur + " minutes");
+        avgDurLbl.setStyle("-fx-font-size: 14px;");
 
         Button refreshBtn = new Button("Refresh Stats");
         refreshBtn.setStyle("-fx-background-color: #00c3ff; -fx-text-fill: white; -fx-font-weight: bold;");
@@ -528,7 +611,16 @@ public class App extends Application {
             menuPane.setCenter(createStatsPage()); 
         });
 
-        layout.getChildren().addAll(titleLabel, totalLabel, busyLabel, avgDurationLabel, refreshBtn);
+        layout.getChildren().addAll(
+            titleLabel, 
+            totalLbl, 
+            busyDayLbl, 
+            busyMonthLbl, 
+            freqLbl, 
+            avgDurLbl, 
+            refreshBtn
+        );
+        
         return layout;
     }
 

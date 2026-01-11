@@ -1,12 +1,18 @@
 package service; 
 
-import model.Event;
-import model.RecurrentEvent;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import model.Event;
+import model.RecurrentEvent;
 
 public class RecurrenceManager {
 
@@ -48,6 +54,11 @@ public class RecurrenceManager {
                 if (base != null) {
                     RecurrentEvent re = new RecurrentEvent(base, interval, count, endDate);
                     recurrentEvents.add(re);
+
+                    int index = baseEvents.indexOf(base);
+                    if (index != -1) {
+                    baseEvents.set(index, re);
+                    }
                 }
             }
         } catch (IOException e) {
