@@ -56,14 +56,13 @@ public class App extends Application {
             alert.setTitle("Reminder");
             alert.setHeaderText("Upcoming Events (Next 24h)");
         
-        // Simple loop to list names
             String message = "";
             for (Event e : upcoming) {
-            message += "- " + e.getTitle() + "\n";
+                message += "- " + e.getTitle() + "\n";
             }
         
-        alert.setContentText(message);
-        alert.showAndWait();
+            alert.setContentText(message);
+            alert.showAndWait();
         }
 
         VBox menuBox = new VBox();
@@ -156,7 +155,6 @@ public class App extends Application {
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER);
         
-        // Reverted buttons to original style
         Button btnPrev = new Button("<");
         Button btnNext = new Button(">");
         
@@ -238,15 +236,12 @@ public class App extends Application {
         container.getChildren().add(eventLabel);
     }
    
-    // REPLACES existing createAddEventPage()
-// NOW ACCEPTS AN ARGUMENT: Event eventToEdit
     private VBox createAddEventPage(Event eventToEdit) {
         VBox formLayout = new VBox(15);
         formLayout.setPadding(new Insets(30));
         formLayout.setAlignment(Pos.CENTER);
         formLayout.setStyle("-fx-background-color: #f0f8ff;");
 
-        // 1. Check Mode: Are we editing?
         boolean isEditing = (eventToEdit != null);
         
         Label titleLabel = new Label(isEditing ? "Edit Event" : "Create New Event");
@@ -271,7 +266,6 @@ public class App extends Application {
         endTimeInput.setMaxWidth(100);
         timeBox.getChildren().addAll(new Label("Time:"), startTimeInput, new Label("to"), endTimeInput);
 
-        // Recurrence UI
         CheckBox recurCheckBox = new CheckBox("Repeat this event?");
         VBox recurOptions = new VBox(10);
         recurOptions.setAlignment(Pos.CENTER);
@@ -291,7 +285,6 @@ public class App extends Application {
             recurOptions.setVisible(recurCheckBox.isSelected());
         });
 
-        // 2. PRE-FILL DATA IF EDITING
         if (isEditing) {
             nameInput.setText(eventToEdit.getTitle());
             descInput.setText(eventToEdit.getDescription());
@@ -299,7 +292,6 @@ public class App extends Application {
             startTimeInput.setText(eventToEdit.getstartDateTime().toLocalTime().toString());
             endTimeInput.setText(eventToEdit.getendDateTime().toLocalTime().toString());
             
-            // Check if it was a repeating event
             if (eventToEdit instanceof RecurrentEvent) {
                 RecurrentEvent re = (RecurrentEvent) eventToEdit;
                 recurCheckBox.setSelected(true);
@@ -317,7 +309,6 @@ public class App extends Application {
         Button saveBtn = new Button(isEditing ? "Update Event" : "Save Event");
         saveBtn.setStyle("-fx-background-color: #00c3ff; -fx-text-fill: white; -fx-font-weight: bold;");
 
-        // 3. SAVE LOGIC
         saveBtn.setOnAction(e -> {
             try {
                 LocalDate date = dateInput.getValue();
@@ -408,6 +399,7 @@ public class App extends Application {
         refreshEventList(eventList, eventManager.getAllEvent());
 
         Label statusLabel = new Label("");
+        
         Button editBtn = new Button("Edit Selected");
         editBtn.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
         
@@ -437,8 +429,6 @@ public class App extends Application {
 
         Button deleteBtn = new Button("Delete Selected Event");
         deleteBtn.setStyle("-fx-background-color: #ff4d4d; -fx-text-fill: white; -fx-font-weight: bold;");
-        
-
         
         searchBtn.setOnAction(e -> {
             String query = searchInput.getText();
@@ -472,7 +462,10 @@ public class App extends Application {
             }
         });
 
-        eventslayout.getChildren().addAll(listLabel, searchBox, eventList, deleteBtn, statusLabel);
+        HBox buttons = new HBox(10, editBtn, deleteBtn);
+        buttons.setAlignment(Pos.CENTER);
+
+        eventslayout.getChildren().addAll(listLabel, searchBox, eventList, buttons, statusLabel);
         return eventslayout;
     }
 
@@ -483,11 +476,9 @@ public class App extends Application {
             list.getItems().add("No events found.");
         } else {
             for (Event e : data) {
-                // Logic: Expand repeating events so user sees all of them
                 if (e instanceof RecurrentEvent) {
                     List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
                     for (Event occ : occurrences) {
-                        // Add "(Repeat)" so user knows why it's there
                         String displayStr = String.format("[%d] (Repeat) %s (%s @ %s - %s)", 
                             e.getId(),
                             occ.getTitle(), 
@@ -498,7 +489,6 @@ public class App extends Application {
                         list.getItems().add(displayStr);
                     }
                 } else {
-                    // Normal Event
                     String displayStr = String.format("[%d] %s (%s @ %s - %s)", 
                         e.getId(), 
                         e.getTitle(), 
