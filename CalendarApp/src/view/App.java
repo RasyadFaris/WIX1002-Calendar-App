@@ -126,7 +126,7 @@ public class App extends Application {
         mainStage.show();
     }
 
- private VBox createCalendarView() {
+private VBox createCalendarView() {
     VBox calendarLayout = new VBox(15);
     calendarLayout.setPadding(new Insets(20));
     calendarLayout.setAlignment(Pos.CENTER);
@@ -158,7 +158,7 @@ public class App extends Application {
     String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
     for (int i = 0; i < 7; i++) {
         Label dayLabel = new Label(days[i]);
-        dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d;");
+        dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-min-width: 90; -fx-alignment: center;");
         grid.add(dayLabel, i, 0);
     }
 
@@ -168,13 +168,14 @@ public class App extends Application {
     int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
     if (startOffset == 7) startOffset = 0;
 
-    int row = 1;
     for (int day = 1; day <= totalDaysInMonth; day++) {
-        int col = (startOffset + day - 1) % 7;
+        int totalIndex = startOffset + day - 1;
+        int col = totalIndex % 7;
+        int row = (totalIndex / 7) + 1;
 
         VBox dayBox = new VBox(2);
         dayBox.setAlignment(Pos.TOP_LEFT);
-        dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 90; -fx-min-height: 70; -fx-background-color: white;");
+        dayBox.setStyle("-fx-border-color: #bdc3c7; -fx-padding: 5; -fx-min-width: 110; -fx-min-height: 90; -fx-background-color: white;");
         
         Label lblDayNum = new Label(String.valueOf(day));
         lblDayNum.setStyle("-fx-font-weight: bold;");
@@ -187,13 +188,11 @@ public class App extends Application {
 
         for (Event e : dayEvents) {
             Label eventLabel = new Label("• " + e.getTitle());
-
             eventLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bbd;");
             dayBox.getChildren().add(eventLabel);
         }
 
         grid.add(dayBox, col, row);
-        if (col == 6) row++;
     }
 
     calendarLayout.getChildren().addAll(header, grid);
