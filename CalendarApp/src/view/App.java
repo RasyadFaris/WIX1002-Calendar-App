@@ -175,7 +175,7 @@ public class App extends Application {
 
             VBox dayBox = new VBox(2);
             dayBox.setAlignment(Pos.TOP_LEFT);
-            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 110; -fx-min-height: 80; -fx-background-color: white;");
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 80; -fx-min-height: 70; -fx-background-color: white;");
             
             Label lblDayNum = new Label(String.valueOf(day));
             lblDayNum.setStyle("-fx-font-weight: bold;");
