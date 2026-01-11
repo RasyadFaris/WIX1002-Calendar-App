@@ -6,12 +6,20 @@
     "configurations": [
         {
             "type": "java",
-            "name": "App",
+            "name": "Launcher",
             "request": "launch",
-            "mainClass": "App",
+            "mainClass": "Launcher",
             "projectName": "CalendarApp_a8efd040",
             "vmArgs": "--module-path \"C:\\Users\\Zahran\\Downloads\\openjfx-25.0.1_windows-x64_bin-sdk\\javafx-sdk-25.0.1\\lib\" --add-modules javafx.controls,javafx.base,javafx.fxml,javafx.graphics,javafx.media,javafx.web"
 
         },
+        {
+            "type": "java",
+            "name": "App",
+            "request": "launch",
+            "mainClass": "App",
+            "projectName": "CalendarApp_a8efd040",
+            "vmArgs": "--module-path \"C:\\Users\\Zahran\\Downloads\\openjfx-25.0.1_windows-x64_bin-sdk\\javafx-sdk-25.0.1\\lib\" --add-modules javafx.controls,javafx.base,javafx.fxml,javafx.graphics,javafx.media,javafx.web --enable-native-access=javafx.graphics"
+        }
     ]
 }

@@ -26,7 +26,7 @@ import javafx.stage.Stage;
 import java.time.LocalDate;
 import java.time.YearMonth;
 
-public class App extends Application {
+public class Apperror extends Application {
 
     @SuppressWarnings("FieldMayBeFinal")
     private CalendarController controller = new CalendarController();

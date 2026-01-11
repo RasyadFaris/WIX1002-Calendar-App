@@ -36,9 +36,7 @@ import java.util.stream.Collectors;
 
 public class App extends Application {
 
-    // --- SERVICE LAYERS (Replaces CalendarController) ---
     private final EventManager eventManager = new EventManager();
-    // RecurrenceManager needs existing events to link rules correctly
     private final RecurrenceManager recurrenceManager = new RecurrenceManager(eventManager.getAllEvent());
     private final StatsService statsService = new StatsService();
 
