@@ -126,78 +126,89 @@ public class App extends Application {
         mainStage.show();
     }
 
-private VBox createCalendarView() {
-    VBox calendarLayout = new VBox(15);
-    calendarLayout.setPadding(new Insets(20));
-    calendarLayout.setAlignment(Pos.CENTER);
+    private VBox createCalendarView() {
+        VBox calendarLayout = new VBox(15);
+        calendarLayout.setPadding(new Insets(20));
+        calendarLayout.setAlignment(Pos.CENTER);
 
-    HBox header = new HBox(20);
-    header.setAlignment(Pos.CENTER);
-    
-    Button btnPrev = new Button("<");
-    Button btnNext = new Button(">");
-    Label lblMonth = new Label(watchDate.getMonth().toString() + " " + watchDate.getYear());
-    lblMonth.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-
-    btnPrev.setOnAction(e -> { 
-        watchDate = watchDate.minusMonths(1); 
-        menuPane.setCenter(createCalendarView()); 
-    });
-    btnNext.setOnAction(e -> { 
-        watchDate = watchDate.plusMonths(1); 
-        menuPane.setCenter(createCalendarView()); 
-    });
-
-    header.getChildren().addAll(btnPrev, lblMonth, btnNext);
-
-    GridPane grid = new GridPane();
-    grid.setAlignment(Pos.CENTER);
-    grid.setHgap(10);
-    grid.setVgap(10);
-
-    String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
-    for (int i = 0; i < 7; i++) {
-        Label dayLabel = new Label(days[i]);
-        dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-min-width: 90; -fx-alignment: center;");
-        grid.add(dayLabel, i, 0);
-    }
-
-    YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
-    int totalDaysInMonth = ym.lengthOfMonth();
-    
-    int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
-    if (startOffset == 7) startOffset = 0;
-
-    for (int day = 1; day <= totalDaysInMonth; day++) {
-        int totalIndex = startOffset + day - 1;
-        int col = totalIndex % 7;
-        int row = (totalIndex / 7) + 1;
-
-        VBox dayBox = new VBox(2);
-        dayBox.setAlignment(Pos.TOP_LEFT);
-        dayBox.setStyle("-fx-border-color: #bdc3c7; -fx-padding: 5; -fx-min-width: 110; -fx-min-height: 90; -fx-background-color: white;");
+        HBox header = new HBox(20);
+        header.setAlignment(Pos.CENTER);
         
-        Label lblDayNum = new Label(String.valueOf(day));
-        lblDayNum.setStyle("-fx-font-weight: bold;");
-        dayBox.getChildren().add(lblDayNum);
+        Button btnPrev = new Button("<");
+        Button btnNext = new Button(">");
+        Label lblMonth = new Label(watchDate.getMonth().toString() + " " + watchDate.getYear());
+        lblMonth.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        java.time.LocalDateTime startOfDay = watchDate.withDayOfMonth(day).atStartOfDay();
-        java.time.LocalDateTime endOfDay = startOfDay.plusDays(1).minusSeconds(1);
+        btnPrev.setOnAction(e -> { 
+            watchDate = watchDate.minusMonths(1); 
+            menuPane.setCenter(createCalendarView()); 
+        });
+        btnNext.setOnAction(e -> { 
+            watchDate = watchDate.plusMonths(1); 
+            menuPane.setCenter(createCalendarView()); 
+        });
 
-        java.util.List<Event> dayEvents = controller.getEventsInRange(startOfDay, endOfDay);
+        header.getChildren().addAll(btnPrev, lblMonth, btnNext);
 
-        for (Event e : dayEvents) {
-            Label eventLabel = new Label("• " + e.getTitle());
-            eventLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bbd;");
-            dayBox.getChildren().add(eventLabel);
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(10);
+        grid.setVgap(10);
+
+        String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
+        for (int i = 0; i < 7; i++) {
+            Label dayLabel = new Label(days[i]);
+            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-min-width: 90; -fx-alignment: center;");
+            grid.add(dayLabel, i, 0);
         }
 
-        grid.add(dayBox, col, row);
-    }
+        YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
+        int totalDaysInMonth = ym.lengthOfMonth();
+        
+        int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
+        if (startOffset == 7) startOffset = 0;
 
-    calendarLayout.getChildren().addAll(header, grid);
-    return calendarLayout;
-}
+        for (int day = 1; day <= totalDaysInMonth; day++) {
+            int totalIndex = startOffset + day - 1;
+            int col = totalIndex % 7;
+            int row = (totalIndex / 7) + 1;
+
+            VBox dayBox = new VBox(2);
+            dayBox.setAlignment(Pos.TOP_LEFT);
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 110; -fx-min-height: 80; -fx-background-color: white;");
+            
+            Label lblDayNum = new Label(String.valueOf(day));
+            lblDayNum.setStyle("-fx-font-weight: bold;");
+            dayBox.getChildren().add(lblDayNum);
+
+            LocalDate gridDate = watchDate.withDayOfMonth(day);
+            
+            List<Event> dayEvents = new ArrayList<>();
+            for (Event e : eventManager.getAllEvent()) {
+                if (e instanceof RecurrentEvent) {
+                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
+                    for (Event occ : occurrences) {
+                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
+                            dayEvents.add(occ);
+                        }
+                    }
+                } else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
+                    dayEvents.add(e);
+                }
+            }
+
+            for (Event e : dayEvents) {
+                Label eventLabel = new Label("• " + e.getTitle());
+                eventLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bbd;");
+                dayBox.getChildren().add(eventLabel);
+            }
+
+            grid.add(dayBox, col, row);
+        }
+
+        calendarLayout.getChildren().addAll(header, grid);
+        return calendarLayout;
+    }
    
     private VBox createAddEventPage() {
         VBox formLayout = new VBox(15);
