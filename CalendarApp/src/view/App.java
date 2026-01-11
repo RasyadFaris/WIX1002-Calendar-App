@@ -158,7 +158,7 @@ public class App extends Application {
         String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
         for (int i = 0; i < 7; i++) {
             Label dayLabel = new Label(days[i]);
-            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d;");
+            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-min-width: 90; -fx-alignment: center;");
             grid.add(dayLabel, i, 0);
         }
 
@@ -168,34 +168,42 @@ public class App extends Application {
         int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
         if (startOffset == 7) startOffset = 0;
 
-        int row = 1;
         for (int day = 1; day <= totalDaysInMonth; day++) {
-            int col = (startOffset + day - 1) % 7;
+            int totalIndex = startOffset + day - 1;
+            int col = totalIndex % 7;
+            int row = (totalIndex / 7) + 1;
 
             VBox dayBox = new VBox(2);
             dayBox.setAlignment(Pos.TOP_LEFT);
-            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 80; -fx-min-height: 60; -fx-background-color: white;");
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 110; -fx-min-height: 80; -fx-background-color: white;");
             
             Label lblDayNum = new Label(String.valueOf(day));
             lblDayNum.setStyle("-fx-font-weight: bold;");
             dayBox.getChildren().add(lblDayNum);
 
-            LocalDate specificDate = watchDate.withDayOfMonth(day);
+            LocalDate gridDate = watchDate.withDayOfMonth(day);
             
-            // --- UPDATED: Use EventManager ---
-            List<Event> dayEvents = eventManager.getAllEvent().stream()
-                .filter(e -> e.getstartDateTime().toLocalDate().equals(specificDate))
-                .collect(Collectors.toList());
+            List<Event> dayEvents = new ArrayList<>();
+            for (Event e : eventManager.getAllEvent()) {
+                if (e instanceof RecurrentEvent) {
+                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
+                    for (Event occ : occurrences) {
+                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
+                            dayEvents.add(occ);
+                        }
+                    }
+                } else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
+                    dayEvents.add(e);
+                }
+            }
 
             for (Event e : dayEvents) {
                 Label eventLabel = new Label("• " + e.getTitle());
-                eventLabel.setStyle("-fx-font-size: 12px; -fx-text-fill: #007bbd;");
+                eventLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bbd;");
                 dayBox.getChildren().add(eventLabel);
             }
 
             grid.add(dayBox, col, row);
-
-            if (col == 6) row++;
         }
 
         calendarLayout.getChildren().addAll(header, grid);
