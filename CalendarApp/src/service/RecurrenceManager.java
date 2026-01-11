@@ -12,8 +12,7 @@ public class RecurrenceManager {
 
     private static final String RECURRENT_FILE = "data/recurrent.csv";
     private final List<RecurrentEvent> recurrentEvents = new ArrayList<>();
-
-    // We need the base events (from EventManager) to link the rules to them
+    
     public RecurrenceManager(List<Event> baseEvents) {
         loadRecurrentEvents(baseEvents);
     }
@@ -76,8 +75,6 @@ public class RecurrenceManager {
         recurrentEvents.add(re);
         saveRecurrentEvents();
     }
-    
-    // --- YOUR EXISTING LOGIC BELOW (Unchanged) ---
 
     public static List<Event> generateOccurrences(RecurrentEvent re) {
         List<Event> occurrences = new ArrayList<>();
