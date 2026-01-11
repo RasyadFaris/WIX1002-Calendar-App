@@ -4,16 +4,6 @@
     ],
     "java.project.outputPath": "bin",
     "java.project.referencedLibraries": [
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\jfx.incubator.richtext.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\jdk.jsobject.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\jfx.incubator.input.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.graphics.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.controls.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.media.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.base.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx-swt.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.web.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.fxml.jar",
-        "d:\\Zahran\\NetBeans_Projects\\WIX1002-Calendar-App\\CalendarApp\\lib\\javafx.swing.jar"
+        "lib/**/*.jar"
     ]
 }
