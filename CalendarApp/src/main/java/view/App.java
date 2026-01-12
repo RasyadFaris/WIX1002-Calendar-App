@@ -1,4 +1,4 @@
-package main.java.view;
+package view;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,15 +28,15 @@ import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
-import main.java.model.Event;
-import main.java.model.RecurrentEvent;
-import main.java.service.BackupService;
-import main.java.service.ConflictService;
-import main.java.service.EventManager;
-import main.java.service.NotificationService;
-import main.java.service.RecurrenceManager;
-import main.java.service.SearchService;
-import main.java.service.StatsService;
+import model.Event;
+import model.RecurrentEvent;
+import service.BackupService;
+import service.ConflictService;
+import service.EventManager;
+import service.NotificationService;
+import service.RecurrenceManager;
+import service.SearchService;
+import service.StatsService;
 
 public class App extends Application {
 
