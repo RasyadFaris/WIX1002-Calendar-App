@@ -1,7 +1,10 @@
 package service;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 public class BackupService {
     public static void backup(String destinationPath) throws IOException {
@@ -17,7 +20,7 @@ public class BackupService {
 
     public static void restore(String sourcePath) throws IOException {
         Files.copy(Paths.get(sourcePath + "/event_backup.csv"), Paths.get("data/event.csv"), StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(Paths.get(sourcePath + "/recurrent.csv"), Paths.get("data/recurrent.csv"), StandardCopyOption.REPLACE_EXISTING);
+        Files.copy(Paths.get(sourcePath + "/recurrent_backup.csv"), Paths.get("data/recurrent.csv"), StandardCopyOption.REPLACE_EXISTING);
         System.out.println("Restore completed from " + sourcePath);
     }
 }
