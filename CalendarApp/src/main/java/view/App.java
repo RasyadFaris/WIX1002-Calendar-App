@@ -6,8 +6,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -145,89 +145,103 @@ public class App extends Application {
         mainStage.show();
     }
 
- private VBox createCalendarView() {
-    VBox calendarLayout = new VBox(25); 
-    calendarLayout.setPadding(new Insets(40)); 
-    calendarLayout.setAlignment(Pos.CENTER);
-    
-    String cliFont = "-fx-font-family: 'Courier New'; -fx-font-size: 16px;";
-
-    HBox header = new HBox(30);
-    header.setAlignment(Pos.CENTER);
-    
-    Button btnPrev = new Button("<");
-    Button btnNext = new Button(">");
-    Label lblMonth = new Label(watchDate.getMonth().toString().substring(0, 3) + " " + watchDate.getYear());
-    lblMonth.setStyle("-fx-font-size: 26px; -fx-font-weight: bold; -fx-font-family: 'Courier New';");
-
-    btnPrev.setOnAction(e -> { watchDate = watchDate.minusMonths(1); menuPane.setCenter(createCalendarView()); });
-    btnNext.setOnAction(e -> { watchDate = watchDate.plusMonths(1); menuPane.setCenter(createCalendarView()); });
-
-    header.getChildren().addAll(btnPrev, lblMonth, btnNext);
-    calendarLayout.getChildren().add(header);
-
-    GridPane grid = new GridPane();
-    grid.setAlignment(Pos.CENTER);
-    grid.setHgap(25); 
-    grid.setVgap(20); 
-
-    String[] cliDays = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
-    for (int i = 0; i < 7; i++) {
-        Label dayHead = new Label(cliDays[i]);
-        dayHead.setStyle("-fx-font-weight: bold; -fx-font-size: 18px; -fx-font-family: 'Courier New';");
-        grid.add(dayHead, i, 0);
-    }
-
-    YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
-    int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue() % 7;
-
-    VBox eventDetails = new VBox(10);
-    eventDetails.setAlignment(Pos.CENTER);
-    eventDetails.setPadding(new Insets(20, 0, 0, 0));
-
-    for (int day = 1; day <= ym.lengthOfMonth(); day++) {
-        int col = (startOffset + day - 1) % 7;
-        int row = ((startOffset + day - 1) / 7) + 1;
-
-        LocalDate gridDate = watchDate.withDayOfMonth(day);
-        List<Event> dayEvents = getEventsForDate(gridDate);
-
-   
-        String dayText = String.valueOf(day) + (dayEvents.isEmpty() ? "" : "*");
-        Label lblDay = new Label(dayText);
+private VBox createCalendarView() {
+        VBox calendarLayout = new VBox(15);
         
-     
-        lblDay.setStyle(cliFont);
-        lblDay.setMinWidth(40); 
-        lblDay.setAlignment(Pos.CENTER);
+        calendarLayout.setPadding(new Insets(30)); 
+        calendarLayout.setAlignment(Pos.CENTER);
+        calendarLayout.setStyle("-fx-background-color: #f0f8ff;"); 
 
-        grid.add(lblDay, col, row);
+        HBox header = new HBox(20);
+        header.setAlignment(Pos.CENTER);
+        
+        Button btnPrev = new Button("<");
+        Button btnNext = new Button(">");
+        
+        Label lblMonth = new Label(watchDate.getMonth().toString() + " " + watchDate.getYear());
+        lblMonth.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
 
-        for (Event e : dayEvents) {
-            Label detail = new Label("* " + day + ": " + e.getTitle() + " (" + e.getstartDateTime().toLocalTime() + ")");
-            detail.setStyle(cliFont + "-fx-text-fill: #007bbd;");
-            eventDetails.getChildren().add(detail);
+        btnPrev.setOnAction(e -> { 
+            watchDate = watchDate.minusMonths(1); 
+            menuPane.setCenter(createCalendarView()); 
+        });
+        btnNext.setOnAction(e -> { 
+            watchDate = watchDate.plusMonths(1); 
+            menuPane.setCenter(createCalendarView()); 
+        });
+
+        header.getChildren().addAll(btnPrev, lblMonth, btnNext);
+
+        GridPane grid = new GridPane();
+        grid.setAlignment(Pos.CENTER);
+        grid.setHgap(5);
+        grid.setVgap(5);
+
+        String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
+        for (int i = 0; i < 7; i++) {
+            Label dayLabel = new Label(days[i]);
+            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-alignment: center;");
+            dayLabel.setMinWidth(100);
+            dayLabel.setAlignment(Pos.CENTER);
+            grid.add(dayLabel, i, 0);
         }
+
+        YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
+        int totalDaysInMonth = ym.lengthOfMonth();
+        
+        int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
+        if (startOffset == 7) startOffset = 0;
+
+        for (int day = 1; day <= totalDaysInMonth; day++) {
+            int totalIndex = startOffset + day - 1;
+            int col = totalIndex % 7;
+            int row = (totalIndex / 7) + 1;
+
+            VBox dayBox = new VBox(2);
+            dayBox.setAlignment(Pos.TOP_LEFT);
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 100; -fx-min-height: 80; -fx-background-color: white;");
+            
+            Label lblDayNum = new Label(String.valueOf(day));
+            lblDayNum.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
+            dayBox.getChildren().add(lblDayNum);
+
+            LocalDate currentGridDate = watchDate.withDayOfMonth(day);
+            List<Event> daysEvents = getEventsForDate(currentGridDate);
+
+            for (Event e : daysEvents) {
+                Label eventLabel = new Label("• " + e.getTitle());
+                eventLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #007bbd; -fx-cursor: hand;");
+                dayBox.getChildren().add(eventLabel);
+            }
+
+            grid.add(dayBox, col, row);
+        }
+
+        calendarLayout.getChildren().addAll(header, grid);
+        return calendarLayout;
     }
 
-    calendarLayout.getChildren().addAll(grid, eventDetails);
-    return calendarLayout;
-}
+    private List<Event> getEventsForDate(LocalDate date) {
+        List<Event> result = new ArrayList<>();
+        List<Event> allEvents = eventManager.getAllEvent();
 
-// Helper to find events including recurrence
-private List<Event> getEventsForDate(LocalDate date) {
-    List<Event> result = new ArrayList<>();
-    for (Event e : eventManager.getAllEvent()) {
-        if (e instanceof RecurrentEvent) {
-            RecurrenceManager.generateOccurrences((RecurrentEvent) e).stream()
-                .filter(occ -> occ.getstartDateTime().toLocalDate().equals(date))
-                .forEach(result::add);
-        } else if (e.getstartDateTime().toLocalDate().equals(date)) {
-            result.add(e);
+        for (Event e : allEvents) {
+            if (e instanceof RecurrentEvent) {
+                RecurrentEvent re = (RecurrentEvent) e;
+                List<Event> occurrences = RecurrenceManager.generateOccurrences(re);
+                for(Event occ : occurrences) {
+                    if(occ.getstartDateTime().toLocalDate().equals(date)) {
+                        result.add(occ);
+                    }
+                }
+            } else {
+                if (e.getstartDateTime().toLocalDate().equals(date)) {
+                    result.add(e);
+                }
+            }
         }
+        return result;
     }
-    return result;
-}
     private void addEventLabel(VBox container, Event e) {
         Label eventLabel = new Label("• " + e.getTitle());
         eventLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #007bbd;");
@@ -378,12 +392,10 @@ private List<Event> getEventsForDate(LocalDate date) {
         HBox searchBox = new HBox(10);
         searchBox.setAlignment(Pos.CENTER);
         
-        // 1. Title Search Input
         TextField searchInput = new TextField();
         searchInput.setPromptText("Search by Title...");
         searchInput.setMaxWidth(150);
 
-        // 2. NEW: Date Search Input
         DatePicker searchDate = new DatePicker();
         searchDate.setPromptText("Pick a Date");
         searchDate.setMaxWidth(150);
