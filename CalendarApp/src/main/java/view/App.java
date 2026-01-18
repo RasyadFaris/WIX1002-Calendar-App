@@ -27,7 +27,6 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
-
 import model.Event;
 import model.RecurrentEvent;
 import service.BackupService;
@@ -381,9 +380,15 @@ public class App extends Application {
         HBox searchBox = new HBox(10);
         searchBox.setAlignment(Pos.CENTER);
         
+        // 1. Title Search Input
         TextField searchInput = new TextField();
         searchInput.setPromptText("Search by Title...");
-        searchInput.setMaxWidth(200);
+        searchInput.setMaxWidth(150);
+
+        // 2. NEW: Date Search Input
+        DatePicker searchDate = new DatePicker();
+        searchDate.setPromptText("Pick a Date");
+        searchDate.setMaxWidth(150);
 
         Button searchBtn = new Button("Search");
         searchBtn.setStyle("-fx-background-color: #00c3ff; -fx-text-fill: white; -fx-font-weight: bold;");
@@ -391,7 +396,7 @@ public class App extends Application {
         Button clearBtn = new Button("Reset");
         clearBtn.setStyle("-fx-background-color: #bdc3c7; -fx-text-fill: white; -fx-font-weight: bold;");
 
-        searchBox.getChildren().addAll(searchInput, searchBtn, clearBtn);
+        searchBox.getChildren().addAll(searchInput, searchDate, searchBtn, clearBtn);
 
         ListView<String> eventList = new ListView<>();
         eventList.setMaxWidth(500);
@@ -400,7 +405,6 @@ public class App extends Application {
         refreshEventList(eventList, eventManager.getAllEvent());
 
         Label statusLabel = new Label("");
-        
         Button editBtn = new Button("Edit Selected");
         editBtn.setStyle("-fx-background-color: #f39c12; -fx-text-fill: white; -fx-font-weight: bold;");
         
@@ -412,9 +416,7 @@ public class App extends Application {
                     if(endIndex != -1) {
                         String idStr = selectedItem.substring(1, endIndex);
                         int idToEdit = Integer.parseInt(idStr);
-                        
                         Event eventToEdit = eventManager.findEventById(idToEdit);
-                        
                         if (eventToEdit != null) {
                             menuPane.setCenter(createAddEventPage(eventToEdit));
                         }
@@ -433,12 +435,28 @@ public class App extends Application {
         
         searchBtn.setOnAction(e -> {
             String query = searchInput.getText();
-            List<Event> results = SearchService.searchByTitle(eventManager.getAllEvent(), query);
+            LocalDate date = searchDate.getValue();
+            
+            List<Event> allEvents = eventManager.getAllEvent();
+            List<Event> results;
+
+            if (date != null) {
+                results = allEvents.stream()
+                    .filter(ev -> ev.getstartDateTime().toLocalDate().equals(date))
+                    .collect(java.util.stream.Collectors.toList());
+            } 
+            else if (!query.isEmpty()) {
+                results = SearchService.searchByTitle(allEvents, query);
+            } 
+            else {
+                results = allEvents;
+            }
             refreshEventList(eventList, results);
         });
 
         clearBtn.setOnAction(e -> {
             searchInput.clear();
+            searchDate.setValue(null);
             refreshEventList(eventList, eventManager.getAllEvent());
         });
 
@@ -463,10 +481,10 @@ public class App extends Application {
             }
         });
 
-        HBox buttons = new HBox(10, editBtn, deleteBtn);
-        buttons.setAlignment(Pos.CENTER);
+        HBox actionBtns = new HBox(10, editBtn, deleteBtn);
+        actionBtns.setAlignment(Pos.CENTER);
 
-        eventslayout.getChildren().addAll(listLabel, searchBox, eventList, buttons, statusLabel);
+        eventslayout.getChildren().addAll(listLabel, searchBox, eventList, actionBtns, statusLabel);
         return eventslayout;
     }
 
