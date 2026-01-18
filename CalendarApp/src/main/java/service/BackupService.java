@@ -1,26 +1,63 @@
 package service;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
+import java.io.*;
+import java.nio.file.*;
+import java.util.List;
 
 public class BackupService {
-    public static void backup(String destinationPath) throws IOException {
-        File backupDirectory = new File(destinationPath);
-        if (!backupDirectory.exists()){
-            backupDirectory.mkdirs();
-        }
+    
+    // combine these files into one
+    private static final String[] TARGET_FILES = {"data/event.csv", "data/recurrent.csv"};
 
-        Files.copy(Paths.get("data/event.csv"), Paths.get(destinationPath + "/event_backup.csv"), StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(Paths.get("data/recurrent.csv"), Paths.get(destinationPath + "/recurrent_backup.csv"), StandardCopyOption.REPLACE_EXISTING);
-        System.out.println("Backup completed to " + destinationPath);
+    public static void backup(String destinationFolder) throws IOException {
+        File backupDir = new File(destinationFolder);
+        if (!backupDir.exists()) backupDir.mkdirs();
+
+        // One file for everything
+        File backupFile = new File(destinationFolder + "/calendar_full_backup.txt");
+        
+        try (PrintWriter pw = new PrintWriter(new FileWriter(backupFile))) {
+            for (String filePath : TARGET_FILES) {
+                File src = new File(filePath);
+                if (src.exists()) {
+                    pw.println("---START:" + src.getName() + "---");
+                    
+                    List<String> lines = Files.readAllLines(src.toPath());
+                    for (String line : lines) pw.println(line);
+                    
+                    pw.println("---END:" + src.getName() + "---");
+                }
+            }
+        }
+        System.out.println("Backup consolidated to " + backupFile.getAbsolutePath());
     }
 
-    public static void restore(String sourcePath) throws IOException {
-        Files.copy(Paths.get(sourcePath + "/event_backup.csv"), Paths.get("data/event.csv"), StandardCopyOption.REPLACE_EXISTING);
-        Files.copy(Paths.get(sourcePath + "/recurrent_backup.csv"), Paths.get("data/recurrent.csv"), StandardCopyOption.REPLACE_EXISTING);
-        System.out.println("Restore completed from " + sourcePath);
+    public static void restore(String sourceFolder) throws IOException {
+        File backupFile = new File(sourceFolder + "/calendar_full_backup.txt");
+        if (!backupFile.exists()) throw new FileNotFoundException("Backup file 'calendar_full_backup.txt' not found in " + sourceFolder);
+
+        try (BufferedReader br = new BufferedReader(new FileReader(backupFile))) {
+            String line;
+            PrintWriter currentWriter = null;
+
+            while ((line = br.readLine()) != null) {
+                if (line.startsWith("---START:")) {
+                    String filename = line.substring(9, line.length() - 3); // extract filename
+                    File target = new File("data/" + filename);
+                    if (target.getParentFile() != null) target.getParentFile().mkdirs();
+                    currentWriter = new PrintWriter(new FileWriter(target));
+                } else if (line.startsWith("---END:")) {
+                    if (currentWriter != null) {
+                        currentWriter.close();
+                        currentWriter = null;
+                    }
+                } else {
+                    if (currentWriter != null) {
+                        currentWriter.println(line);
+                    }
+                }
+            }
+        }
+        System.out.println("Restore completed.");
     }
 }
