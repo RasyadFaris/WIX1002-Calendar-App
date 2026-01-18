@@ -438,12 +438,25 @@ public class App extends Application {
             LocalDate date = searchDate.getValue();
             
             List<Event> allEvents = eventManager.getAllEvent();
-            List<Event> results;
+            List<Event> results = new java.util.ArrayList<>(); 
 
             if (date != null) {
-                results = allEvents.stream()
-                    .filter(ev -> ev.getstartDateTime().toLocalDate().equals(date))
-                    .collect(java.util.stream.Collectors.toList());
+                for (Event event : allEvents) {
+                    if (event instanceof RecurrentEvent) {
+                        RecurrentEvent re = (RecurrentEvent) event;
+                        List<Event> occurrences = RecurrenceManager.generateOccurrences(re);
+                        
+                        for (Event occ : occurrences) {
+                            if (occ.getstartDateTime().toLocalDate().equals(date)) {
+                                results.add(occ);
+                            }
+                        }
+                    } else {
+                        if (event.getstartDateTime().toLocalDate().equals(date)) {
+                            results.add(event);
+                        }
+                    }
+                }
             } 
             else if (!query.isEmpty()) {
                 results = SearchService.searchByTitle(allEvents, query);
