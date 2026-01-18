@@ -1,3 +1,2 @@
-eventId,title,description,startDateTime,endDateTime
-1,Computing Mathematics,Class ,2026-01-12T09:00,2026-01-12T10:00
-2,Fundamentals of Programming,Lecture Class,2026-01-13T10:00,2026-01-13T12:00
+eventId,title,description,startDateTime,endDateTime,reminderMinutes
+1,Computing Mathematics,Tutorial,2026-01-19T09:00:00,2026-01-19T10:00:00,1440

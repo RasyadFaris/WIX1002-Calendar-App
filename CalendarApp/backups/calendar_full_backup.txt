@@ -1,0 +1,10 @@
+---START:event.csv---
+eventId,title,description,startDateTime,endDateTime,reminderMinutes
+1,Computing Mathematics,Tutorial,2026-01-19T09:00:00,2026-01-19T10:00:00,1440
+---END:event.csv---
+---START:recurrent.csv---
+eventId,recurrentInterval,recurrentTimes,recurrentEndDate
+1,1w,3,0
+2,1w,2,0
+1,1w,2,0
+---END:recurrent.csv---

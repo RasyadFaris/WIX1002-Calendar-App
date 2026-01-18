@@ -2,11 +2,11 @@ package view;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
-import java.util.ArrayList;
 import java.util.List;
 
 import javafx.application.Application;
@@ -17,15 +17,10 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
+
 import model.Event;
 import model.RecurrentEvent;
-import service.BackupService;
-import service.ConflictService;
-import service.EventManager;
-import service.NotificationService;
-import service.RecurrenceManager;
-import service.SearchService;
-import service.StatsService;
+import service.*; 
 
 public class App extends Application {
 
@@ -39,22 +34,39 @@ public class App extends Application {
 
     @Override
     public void start(Stage mainStage) {
-        // Notification Check
+        
+        // --- 1. Notification / Reminder Logic (Fixed) ---
+        // We get upcoming events based on the logic in NotificationService
         List<Event> upcoming = notificationService.getUpcomingEvents(eventManager.getAllEvent());
+        
         if (!upcoming.isEmpty()) {
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Reminder");
             alert.setHeaderText("Upcoming Events");
+            
             StringBuilder message = new StringBuilder();
+            LocalDateTime now = LocalDateTime.now();
+
             for (Event e : upcoming) {
-                // Calculate time left roughly for display
-                long minsLeft = java.time.Duration.between(LocalDateTime.now(), e.getstartDateTime()).toMinutes();
-                message.append("- ").append(e.getTitle()).append(" (in ").append(minsLeft).append(" mins)\n");
+                // Calculate exact time difference
+                Duration diff = Duration.between(now, e.getstartDateTime());
+                
+                // If the event has already started (diff is negative), treat as 0
+                if (diff.isNegative()) diff = Duration.ZERO;
+
+                long hours = diff.toHours();
+                long minutes = diff.toMinutesPart(); // Java 9+ feature
+                long seconds = diff.toSecondsPart(); 
+
+                message.append("• ").append(e.getTitle())
+                       .append(String.format("\n   Starts in: %02d hours, %02d minutes, %02d seconds\n", hours, minutes, seconds));
             }
+            
             alert.setContentText(message.toString());
             alert.showAndWait();
         }
 
+        // --- Layout Setup (Standard) ---
         VBox menuBox = new VBox();
         HBox headerBox = new HBox(15);
         headerBox.setPadding(new Insets(10,15,10,15));
@@ -65,13 +77,13 @@ public class App extends Application {
         menuButton.setStyle("-fx-background-color: #ffffff; -fx-font-weight: bold;");
         Label calendarLabel = new Label("WIX1002 - Calendar App");
         calendarLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: white;");
-        calendarLabel.setAlignment(Pos.CENTER);
         headerBox.getChildren().addAll(menuButton, calendarLabel);
 
         VBox optionsBox = new VBox(10);
         optionsBox.setPadding(new Insets(10,15,10,15));
         optionsBox.setStyle("-fx-background-color: #80d9f4;");
         optionsBox.setAlignment(Pos.CENTER);
+
         String buttonStyle = "-fx-background-color: #ffffff; -fx-min-width: 150px;";
 
         Button calendarButton = new Button("View Calendar");
@@ -111,6 +123,7 @@ public class App extends Application {
 
         optionsBox.getChildren().addAll(calendarButton, addEventBtn, viewEventsBtn, statsBtn, settingsBtn);
         menuBox.getChildren().add(headerBox);
+
         menuButton.setOnAction(e-> {
             if (menuBox.getChildren().contains(optionsBox)) menuBox.getChildren().remove(optionsBox);
             else menuBox.getChildren().add(optionsBox);
@@ -127,8 +140,9 @@ public class App extends Application {
 
     private VBox createCalendarView() {
         VBox calendarLayout = new VBox(15);
-        calendarLayout.setPadding(new Insets(20));
+        calendarLayout.setPadding(new Insets(30)); 
         calendarLayout.setAlignment(Pos.CENTER);
+        calendarLayout.setStyle("-fx-background-color: #f0f8ff;"); 
 
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER);
@@ -143,12 +157,13 @@ public class App extends Application {
 
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
-        grid.setHgap(10); grid.setVgap(10);
+        grid.setHgap(5); grid.setVgap(5);
 
         String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
         for (int i = 0; i < 7; i++) {
             Label dayLabel = new Label(days[i]);
-            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-min-width: 90; -fx-alignment: center;");
+            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-alignment: center;");
+            dayLabel.setMinWidth(100);
             grid.add(dayLabel, i, 0);
         }
 
@@ -164,33 +179,30 @@ public class App extends Application {
 
             VBox dayBox = new VBox(2);
             dayBox.setAlignment(Pos.TOP_LEFT);
-            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 80; -fx-min-height: 70; -fx-background-color: white;");
-            
-            Label lblDayNum = new Label(String.valueOf(day));
-            lblDayNum.setStyle("-fx-font-weight: bold;");
-            dayBox.getChildren().add(lblDayNum);
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 2; -fx-min-width: 100; -fx-min-height: 60; -fx-background-color: white;");
+            dayBox.getChildren().add(new Label(String.valueOf(day)));
 
             LocalDate gridDate = watchDate.withDayOfMonth(day);
-            List<Event> dayEvents = new ArrayList<>();
             for (Event e : eventManager.getAllEvent()) {
                 if (e instanceof RecurrentEvent) {
                     List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
                     for (Event occ : occurrences) {
-                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) dayEvents.add(occ);
+                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) addEventLabel(dayBox, occ);
                     }
                 } else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
-                    dayEvents.add(e);
+                    addEventLabel(dayBox, e);
                 }
-            }
-            for (Event e : dayEvents) {
-                Label eventLabel = new Label("• " + e.getTitle());
-                eventLabel.setStyle("-fx-font-size: 11px; -fx-text-fill: #007bbd;");
-                dayBox.getChildren().add(eventLabel);
             }
             grid.add(dayBox, col, row);
         }
         calendarLayout.getChildren().addAll(header, grid);
         return calendarLayout;
+    }
+
+    private void addEventLabel(VBox container, Event e) {
+        Label eventLabel = new Label("• " + e.getTitle());
+        eventLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #007bbd;");
+        container.getChildren().add(eventLabel);
     }
    
     private VBox createAddEventPage(Event eventToEdit) {
@@ -212,17 +224,17 @@ public class App extends Application {
         TextField endTimeInput = new TextField("10:00"); endTimeInput.setMaxWidth(100);
         timeBox.getChildren().addAll(new Label("Time:"), startTimeInput, new Label("to"), endTimeInput);
 
-        // --- NEW: Reminder Input ---
+        // Reminder Input
         HBox reminderBox = new HBox(10); reminderBox.setAlignment(Pos.CENTER);
         TextField reminderInput = new TextField("0"); reminderInput.setMaxWidth(80);
         reminderBox.getChildren().addAll(new Label("Remind me (mins before):"), reminderInput);
 
         CheckBox recurCheckBox = new CheckBox("Repeat this event?");
-        VBox recurOptions = new VBox(10); recurOptions.setAlignment(Pos.CENTER); recurOptions.setVisible(false); 
+        VBox recurOptions = new VBox(10); recurOptions.setAlignment(Pos.CENTER); recurOptions.setVisible(false);
         ComboBox<String> intervalBox = new ComboBox<>();
         intervalBox.getItems().addAll("Daily (1d)", "Weekly (1w)", "Monthly (1m)");
         intervalBox.setValue("Weekly (1w)"); 
-        TextField repeatCountInput = new TextField("0"); repeatCountInput.setPromptText("Repeat Times"); repeatCountInput.setMaxWidth(200);
+        TextField repeatCountInput = new TextField("0"); repeatCountInput.setPromptText("Repeat Count"); repeatCountInput.setMaxWidth(200);
         recurOptions.getChildren().addAll(new Label("Frequency:"), intervalBox, new Label("Repeat Counts:"), repeatCountInput);
 
         recurCheckBox.setOnAction(e -> recurOptions.setVisible(recurCheckBox.isSelected()));
@@ -233,7 +245,8 @@ public class App extends Application {
             dateInput.setValue(eventToEdit.getstartDateTime().toLocalDate());
             startTimeInput.setText(eventToEdit.getstartDateTime().toLocalTime().toString());
             endTimeInput.setText(eventToEdit.getendDateTime().toLocalTime().toString());
-            reminderInput.setText(String.valueOf(eventToEdit.getReminderMinutes()));
+            // Safe check for getter existence (depends on if you updated Event.java)
+            reminderInput.setText(String.valueOf(eventToEdit.getReminderMinutes())); 
 
             if (eventToEdit instanceof RecurrentEvent) {
                 RecurrentEvent re = (RecurrentEvent) eventToEdit;
@@ -256,13 +269,11 @@ public class App extends Application {
                 LocalTime endT = LocalTime.parse(endTimeInput.getText());
                 LocalDateTime startDT = LocalDateTime.of(date, startT);
                 LocalDateTime endDT = LocalDateTime.of(date, endT);
-                int reminderMins = Integer.parseInt(reminderInput.getText());
+                int reminderMins = Integer.parseInt(reminderInput.getText()); 
 
                 int eventId = isEditing ? eventToEdit.getId() : eventManager.getNextEventId();
-
-                // Pass reminderMins to the Event constructor
                 Event finalEvent = new Event(eventId, nameInput.getText(), descInput.getText(), startDT, endDT, reminderMins);
-
+                
                 if (!isEditing && ConflictService.isClashing(finalEvent, eventManager.getAllEvent())) {
                     statusLabel.setText("Time Conflict!"); statusLabel.setStyle("-fx-text-fill: red;");
                     return;
@@ -272,14 +283,15 @@ public class App extends Application {
                     String selectedStr = intervalBox.getValue();
                     String code = selectedStr.substring(selectedStr.indexOf("(") + 1, selectedStr.indexOf(")")); 
                     int count = Integer.parseInt(repeatCountInput.getText());
-                    
                     RecurrentEvent re = new RecurrentEvent(finalEvent, code, count, null);
+                    
                     if (isEditing) eventManager.updateEvent(re); 
                     else { eventManager.addEvent(re); recurrenceManager.addRecurrentEvent(re); }
                 } else {
                     if (isEditing) { eventManager.updateEvent(finalEvent); statusLabel.setText("Event Updated!"); } 
                     else { eventManager.addEvent(finalEvent); statusLabel.setText("Event Saved!"); }
                 }
+                
                 statusLabel.setStyle("-fx-text-fill: green;");
                 if (!isEditing) { nameInput.clear(); descInput.clear(); }
 
@@ -303,7 +315,8 @@ public class App extends Application {
 
         HBox searchBox = new HBox(10); searchBox.setAlignment(Pos.CENTER);
         TextField searchInput = new TextField(); searchInput.setPromptText("Search by Title...");
-        Button searchBtn = new Button("Search"); Button clearBtn = new Button("Reset");
+        Button searchBtn = new Button("Search"); 
+        Button clearBtn = new Button("Reset");
         searchBox.getChildren().addAll(searchInput, searchBtn, clearBtn);
 
         ListView<String> eventList = new ListView<>();
@@ -353,7 +366,9 @@ public class App extends Application {
         if (data.isEmpty()) list.getItems().add("No events found.");
         else {
             for (Event e : data) {
-                String reminderStr = e.getReminderMinutes() > 0 ? " [Remind: " + e.getReminderMinutes() + "m]" : "";
+                // If you updated Event.java, this getter exists. If not, this line needs removing.
+                String reminderStr = (e.getReminderMinutes() > 0) ? " [Remind: " + e.getReminderMinutes() + "m]" : "";
+                
                 if (e instanceof RecurrentEvent) {
                     List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
                     for (Event occ : occurrences) {
