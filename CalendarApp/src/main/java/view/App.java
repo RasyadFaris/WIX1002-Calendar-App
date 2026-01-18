@@ -6,8 +6,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -145,13 +145,12 @@ public class App extends Application {
         mainStage.show();
     }
 
-    private VBox createCalendarView() {
+private VBox createCalendarView() {
         VBox calendarLayout = new VBox(15);
         
         calendarLayout.setPadding(new Insets(30)); 
         calendarLayout.setAlignment(Pos.CENTER);
         calendarLayout.setStyle("-fx-background-color: #f0f8ff;"); 
-
 
         HBox header = new HBox(20);
         header.setAlignment(Pos.CENTER);
@@ -183,6 +182,7 @@ public class App extends Application {
             Label dayLabel = new Label(days[i]);
             dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-alignment: center;");
             dayLabel.setMinWidth(100);
+            dayLabel.setAlignment(Pos.CENTER);
             grid.add(dayLabel, i, 0);
         }
 
@@ -199,29 +199,19 @@ public class App extends Application {
 
             VBox dayBox = new VBox(2);
             dayBox.setAlignment(Pos.TOP_LEFT);
-            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 2; -fx-min-width: 100; -fx-min-height: 60; -fx-background-color: white;");
+            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 5; -fx-min-width: 100; -fx-min-height: 80; -fx-background-color: white;");
             
             Label lblDayNum = new Label(String.valueOf(day));
-            lblDayNum.setStyle("-fx-font-weight: bold; -fx-font-size: 10px;");
+            lblDayNum.setStyle("-fx-font-weight: bold; -fx-font-size: 12px;");
             dayBox.getChildren().add(lblDayNum);
 
-            LocalDate gridDate = watchDate.withDayOfMonth(day);
-            
-            List<Event> allEvents = eventManager.getAllEvent();
+            LocalDate currentGridDate = watchDate.withDayOfMonth(day);
+            List<Event> daysEvents = getEventsForDate(currentGridDate);
 
-            for (Event e : allEvents) {
-                if (e instanceof RecurrentEvent) {
-                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
-                    
-                    for (Event occ : occurrences) {
-                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
-                            addEventLabel(dayBox, occ);
-                        }
-                    }
-                } 
-                else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
-                    addEventLabel(dayBox, e);
-                }
+            for (Event e : daysEvents) {
+                Label eventLabel = new Label("• " + e.getTitle());
+                eventLabel.setStyle("-fx-font-size: 10px; -fx-text-fill: #007bbd; -fx-cursor: hand;");
+                dayBox.getChildren().add(eventLabel);
             }
 
             grid.add(dayBox, col, row);
@@ -231,6 +221,27 @@ public class App extends Application {
         return calendarLayout;
     }
 
+    private List<Event> getEventsForDate(LocalDate date) {
+        List<Event> result = new ArrayList<>();
+        List<Event> allEvents = eventManager.getAllEvent();
+
+        for (Event e : allEvents) {
+            if (e instanceof RecurrentEvent) {
+                RecurrentEvent re = (RecurrentEvent) e;
+                List<Event> occurrences = RecurrenceManager.generateOccurrences(re);
+                for(Event occ : occurrences) {
+                    if(occ.getstartDateTime().toLocalDate().equals(date)) {
+                        result.add(occ);
+                    }
+                }
+            } else {
+                if (e.getstartDateTime().toLocalDate().equals(date)) {
+                    result.add(e);
+                }
+            }
+        }
+        return result;
+    }
     private void addEventLabel(VBox container, Event e) {
         Label eventLabel = new Label("• " + e.getTitle());
         eventLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #007bbd;");
@@ -381,12 +392,10 @@ public class App extends Application {
         HBox searchBox = new HBox(10);
         searchBox.setAlignment(Pos.CENTER);
         
-        // 1. Title Search Input
         TextField searchInput = new TextField();
         searchInput.setPromptText("Search by Title...");
         searchInput.setMaxWidth(150);
 
-        // 2. NEW: Date Search Input
         DatePicker searchDate = new DatePicker();
         searchDate.setPromptText("Pick a Date");
         searchDate.setMaxWidth(150);
@@ -439,12 +448,25 @@ public class App extends Application {
             LocalDate date = searchDate.getValue();
             
             List<Event> allEvents = eventManager.getAllEvent();
-            List<Event> results;
+            List<Event> results = new java.util.ArrayList<>(); 
 
             if (date != null) {
-                results = allEvents.stream()
-                    .filter(ev -> ev.getstartDateTime().toLocalDate().equals(date))
-                    .collect(java.util.stream.Collectors.toList());
+                for (Event event : allEvents) {
+                    if (event instanceof RecurrentEvent) {
+                        RecurrentEvent re = (RecurrentEvent) event;
+                        List<Event> occurrences = RecurrenceManager.generateOccurrences(re);
+                        
+                        for (Event occ : occurrences) {
+                            if (occ.getstartDateTime().toLocalDate().equals(date)) {
+                                results.add(occ);
+                            }
+                        }
+                    } else {
+                        if (event.getstartDateTime().toLocalDate().equals(date)) {
+                            results.add(event);
+                        }
+                    }
+                }
             } 
             else if (!query.isEmpty()) {
                 results = SearchService.searchByTitle(allEvents, query);
