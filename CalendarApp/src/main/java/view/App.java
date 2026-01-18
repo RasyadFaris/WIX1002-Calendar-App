@@ -35,8 +35,7 @@ public class App extends Application {
     @Override
     public void start(Stage mainStage) {
         
-        // --- 1. Notification / Reminder Logic (Fixed) ---
-        // We get upcoming events based on the logic in NotificationService
+        // Notification / Reminder Logic
         List<Event> upcoming = notificationService.getUpcomingEvents(eventManager.getAllEvent());
         
         if (!upcoming.isEmpty()) {
@@ -48,25 +47,22 @@ public class App extends Application {
             LocalDateTime now = LocalDateTime.now();
 
             for (Event e : upcoming) {
-                // Calculate exact time difference
+                // Countdown Logic (Hours, Minutes, Seconds)
                 Duration diff = Duration.between(now, e.getstartDateTime());
-                
-                // If the event has already started (diff is negative), treat as 0
                 if (diff.isNegative()) diff = Duration.ZERO;
 
                 long hours = diff.toHours();
-                long minutes = diff.toMinutesPart(); // Java 9+ feature
+                long minutes = diff.toMinutesPart(); 
                 long seconds = diff.toSecondsPart(); 
 
                 message.append("• ").append(e.getTitle())
                        .append(String.format("\n   Starts in: %02d hours, %02d minutes, %02d seconds\n", hours, minutes, seconds));
             }
-            
             alert.setContentText(message.toString());
             alert.showAndWait();
         }
 
-        // --- Layout Setup (Standard) ---
+        // Layout
         VBox menuBox = new VBox();
         HBox headerBox = new HBox(15);
         headerBox.setPadding(new Insets(10,15,10,15));
@@ -83,7 +79,6 @@ public class App extends Application {
         optionsBox.setPadding(new Insets(10,15,10,15));
         optionsBox.setStyle("-fx-background-color: #80d9f4;");
         optionsBox.setAlignment(Pos.CENTER);
-
         String buttonStyle = "-fx-background-color: #ffffff; -fx-min-width: 150px;";
 
         Button calendarButton = new Button("View Calendar");
@@ -245,7 +240,6 @@ public class App extends Application {
             dateInput.setValue(eventToEdit.getstartDateTime().toLocalDate());
             startTimeInput.setText(eventToEdit.getstartDateTime().toLocalTime().toString());
             endTimeInput.setText(eventToEdit.getendDateTime().toLocalTime().toString());
-            // Safe check for getter existence (depends on if you updated Event.java)
             reminderInput.setText(String.valueOf(eventToEdit.getReminderMinutes())); 
 
             if (eventToEdit instanceof RecurrentEvent) {
@@ -286,12 +280,18 @@ public class App extends Application {
                     RecurrentEvent re = new RecurrentEvent(finalEvent, code, count, null);
                     
                     if (isEditing) eventManager.updateEvent(re); 
-                    else { eventManager.addEvent(re); recurrenceManager.addRecurrentEvent(re); }
+                    else eventManager.addEvent(re);
+                    recurrenceManager.addRecurrentEvent(re); 
+
                 } else {
-                    if (isEditing) { eventManager.updateEvent(finalEvent); statusLabel.setText("Event Updated!"); } 
-                    else { eventManager.addEvent(finalEvent); statusLabel.setText("Event Saved!"); }
+                    if (isEditing) eventManager.updateEvent(finalEvent); 
+                    else eventManager.addEvent(finalEvent);
+                    
+                    // Remove accidental recurrences if switching to Normal
+                    recurrenceManager.removeRecurrentEvent(finalEvent.getId());
                 }
                 
+                statusLabel.setText("Event Saved!");
                 statusLabel.setStyle("-fx-text-fill: green;");
                 if (!isEditing) { nameInput.clear(); descInput.clear(); }
 
@@ -320,7 +320,7 @@ public class App extends Application {
         searchBox.getChildren().addAll(searchInput, searchBtn, clearBtn);
 
         ListView<String> eventList = new ListView<>();
-        eventList.setMaxWidth(500); eventList.setMaxHeight(300);
+        eventList.setMaxWidth(600); eventList.setMaxHeight(300);
         refreshEventList(eventList, eventManager.getAllEvent());
 
         Label statusLabel = new Label("");
@@ -366,16 +366,28 @@ public class App extends Application {
         if (data.isEmpty()) list.getItems().add("No events found.");
         else {
             for (Event e : data) {
-                // If you updated Event.java, this getter exists. If not, this line needs removing.
                 String reminderStr = (e.getReminderMinutes() > 0) ? " [Remind: " + e.getReminderMinutes() + "m]" : "";
                 
+                String timeStr = String.format("(%s @ %s-%s)", 
+                    e.getstartDateTime().toLocalDate(),
+                    e.getstartDateTime().toLocalTime(),
+                    e.getendDateTime().toLocalTime()
+                );
+
                 if (e instanceof RecurrentEvent) {
                     List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
                     for (Event occ : occurrences) {
-                        list.getItems().add(String.format("[%d] (Repeat) %s (%s)%s", e.getId(), occ.getTitle(), occ.getstartDateTime(), reminderStr));
+                        String occTimeStr = String.format("(%s @ %s-%s)", 
+                            occ.getstartDateTime().toLocalDate(),
+                            occ.getstartDateTime().toLocalTime(),
+                            occ.getendDateTime().toLocalTime()
+                        );
+                        list.getItems().add(String.format("[%d] (Repeat) %s: %s %s%s", 
+                            e.getId(), occ.getTitle(), occ.getDescription(), occTimeStr, reminderStr));
                     }
                 } else {
-                    list.getItems().add(String.format("[%d] %s (%s)%s", e.getId(), e.getTitle(), e.getstartDateTime(), reminderStr));
+                    list.getItems().add(String.format("[%d] %s: %s %s%s", 
+                        e.getId(), e.getTitle(), e.getDescription(), timeStr, reminderStr));
                 }
             }
         }

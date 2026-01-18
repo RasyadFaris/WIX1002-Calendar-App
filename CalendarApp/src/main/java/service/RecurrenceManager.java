@@ -1,18 +1,12 @@
 package service; 
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import model.Event;
+import model.RecurrentEvent;
+import java.io.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-
-import model.Event;
-import model.RecurrentEvent;
 
 public class RecurrenceManager {
 
@@ -29,14 +23,13 @@ public class RecurrenceManager {
         if (!file.exists()) return;
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-            br.readLine(); // skip header
+            br.readLine(); 
             String line;
 
             while ((line = br.readLine()) != null) {
                 if (line.trim().isEmpty()) continue;
 
                 String[] p = line.split(",");
-                // Format: eventId, interval, count, endDate
                 if (p.length < 4) continue;
 
                 int eventId = Integer.parseInt(p[0].trim());
@@ -45,7 +38,6 @@ public class RecurrenceManager {
                 String dateStr = p[3].trim();
                 LocalDate endDate = dateStr.equals("0") ? null : LocalDate.parse(dateStr);
 
-                // Find the base event to attach this rule to
                 Event base = baseEvents.stream()
                         .filter(e -> e.getId() == eventId)
                         .findFirst()
@@ -57,7 +49,7 @@ public class RecurrenceManager {
 
                     int index = baseEvents.indexOf(base);
                     if (index != -1) {
-                    baseEvents.set(index, re);
+                        baseEvents.set(index, re);
                     }
                 }
             }
@@ -67,7 +59,6 @@ public class RecurrenceManager {
     }
 
     public void saveRecurrentEvents() {
-        // Ensure directory exists
         File file = new File(RECURRENT_FILE);
         if (file.getParentFile() != null) file.getParentFile().mkdirs();
 
@@ -83,8 +74,18 @@ public class RecurrenceManager {
     }
 
     public void addRecurrentEvent(RecurrentEvent re) {
+        // Remove any existing rule for this ID first to prevent duplicates
+        recurrentEvents.removeIf(e -> e.getId() == re.getId());
         recurrentEvents.add(re);
         saveRecurrentEvents();
+    }
+
+    // Allows removing a rule if an event becomes "Normal"
+    public void removeRecurrentEvent(int eventId) {
+        boolean removed = recurrentEvents.removeIf(e -> e.getId() == eventId);
+        if (removed) {
+            saveRecurrentEvents();
+        }
     }
 
     public static List<Event> generateOccurrences(RecurrentEvent re) {
@@ -94,21 +95,23 @@ public class RecurrenceManager {
         int count = 0;
 
         String interval = re.getInterval();
-        // Basic validation to prevent crash on empty interval
         if (interval == null || interval.length() < 2) return occurrences; 
 
         int amount = Integer.parseInt(interval.substring(0, interval.length() - 1));
         char unit = interval.charAt(interval.length() - 1);
 
         while (true) {
+            // If count is 0 (and no end date), treat it as "Stop immediately" 
+            if (re.getRepeatCount() == 0 && re.getRecurrenceEndDate() == null) break;
+
             if (re.getRepeatCount() > 0 && count >= re.getRepeatCount()) break;
+
             if (re.getRecurrenceEndDate() != null &&
                 currentStart.toLocalDate().isAfter(re.getRecurrenceEndDate())) break;
 
-            // Safety break to prevent infinite loops if logic fails
             if (count > 500) break; 
 
-            Event occ = new Event(re.getId(), re.getTitle(), re.getDescription(), currentStart, currentEnd);
+            Event occ = new Event(re.getId(), re.getTitle(), re.getDescription(), currentStart, currentEnd, re.getReminderMinutes());
             occurrences.add(occ);
 
             if (unit == 'd') {
