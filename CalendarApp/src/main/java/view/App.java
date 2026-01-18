@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.YearMonth;
 import java.util.List;
+import java.util.ArrayList;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -144,92 +145,89 @@ public class App extends Application {
         mainStage.show();
     }
 
-    private VBox createCalendarView() {
-        VBox calendarLayout = new VBox(15);
-        
-        calendarLayout.setPadding(new Insets(30)); 
-        calendarLayout.setAlignment(Pos.CENTER);
-        calendarLayout.setStyle("-fx-background-color: #f0f8ff;"); 
+ private VBox createCalendarView() {
+    VBox calendarLayout = new VBox(25); 
+    calendarLayout.setPadding(new Insets(40)); 
+    calendarLayout.setAlignment(Pos.CENTER);
+    
+    String cliFont = "-fx-font-family: 'Courier New'; -fx-font-size: 16px;";
 
+    HBox header = new HBox(30);
+    header.setAlignment(Pos.CENTER);
+    
+    Button btnPrev = new Button("<");
+    Button btnNext = new Button(">");
+    Label lblMonth = new Label(watchDate.getMonth().toString().substring(0, 3) + " " + watchDate.getYear());
+    lblMonth.setStyle("-fx-font-size: 26px; -fx-font-weight: bold; -fx-font-family: 'Courier New';");
 
-        HBox header = new HBox(20);
-        header.setAlignment(Pos.CENTER);
-        
-        Button btnPrev = new Button("<");
-        Button btnNext = new Button(">");
-        
-        Label lblMonth = new Label(watchDate.getMonth().toString() + " " + watchDate.getYear());
-        lblMonth.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+    btnPrev.setOnAction(e -> { watchDate = watchDate.minusMonths(1); menuPane.setCenter(createCalendarView()); });
+    btnNext.setOnAction(e -> { watchDate = watchDate.plusMonths(1); menuPane.setCenter(createCalendarView()); });
 
-        btnPrev.setOnAction(e -> { 
-            watchDate = watchDate.minusMonths(1); 
-            menuPane.setCenter(createCalendarView()); 
-        });
-        btnNext.setOnAction(e -> { 
-            watchDate = watchDate.plusMonths(1); 
-            menuPane.setCenter(createCalendarView()); 
-        });
+    header.getChildren().addAll(btnPrev, lblMonth, btnNext);
+    calendarLayout.getChildren().add(header);
 
-        header.getChildren().addAll(btnPrev, lblMonth, btnNext);
+    GridPane grid = new GridPane();
+    grid.setAlignment(Pos.CENTER);
+    grid.setHgap(25); 
+    grid.setVgap(20); 
 
-        GridPane grid = new GridPane();
-        grid.setAlignment(Pos.CENTER);
-        grid.setHgap(5);
-        grid.setVgap(5);
-
-        String[] days = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
-        for (int i = 0; i < 7; i++) {
-            Label dayLabel = new Label(days[i]);
-            dayLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #7f8c8d; -fx-alignment: center;");
-            dayLabel.setMinWidth(100);
-            grid.add(dayLabel, i, 0);
-        }
-
-        YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
-        int totalDaysInMonth = ym.lengthOfMonth();
-        
-        int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
-        if (startOffset == 7) startOffset = 0;
-
-        for (int day = 1; day <= totalDaysInMonth; day++) {
-            int totalIndex = startOffset + day - 1;
-            int col = totalIndex % 7;
-            int row = (totalIndex / 7) + 1;
-
-            VBox dayBox = new VBox(2);
-            dayBox.setAlignment(Pos.TOP_LEFT);
-            dayBox.setStyle("-fx-border-color: lightgrey; -fx-padding: 2; -fx-min-width: 100; -fx-min-height: 60; -fx-background-color: white;");
-            
-            Label lblDayNum = new Label(String.valueOf(day));
-            lblDayNum.setStyle("-fx-font-weight: bold; -fx-font-size: 10px;");
-            dayBox.getChildren().add(lblDayNum);
-
-            LocalDate gridDate = watchDate.withDayOfMonth(day);
-            
-            List<Event> allEvents = eventManager.getAllEvent();
-
-            for (Event e : allEvents) {
-                if (e instanceof RecurrentEvent) {
-                    List<Event> occurrences = RecurrenceManager.generateOccurrences((RecurrentEvent) e);
-                    
-                    for (Event occ : occurrences) {
-                        if (occ.getstartDateTime().toLocalDate().equals(gridDate)) {
-                            addEventLabel(dayBox, occ);
-                        }
-                    }
-                } 
-                else if (e.getstartDateTime().toLocalDate().equals(gridDate)) {
-                    addEventLabel(dayBox, e);
-                }
-            }
-
-            grid.add(dayBox, col, row);
-        }
-
-        calendarLayout.getChildren().addAll(header, grid);
-        return calendarLayout;
+    String[] cliDays = {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"};
+    for (int i = 0; i < 7; i++) {
+        Label dayHead = new Label(cliDays[i]);
+        dayHead.setStyle("-fx-font-weight: bold; -fx-font-size: 18px; -fx-font-family: 'Courier New';");
+        grid.add(dayHead, i, 0);
     }
 
+    YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
+    int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue() % 7;
+
+    VBox eventDetails = new VBox(10);
+    eventDetails.setAlignment(Pos.CENTER);
+    eventDetails.setPadding(new Insets(20, 0, 0, 0));
+
+    for (int day = 1; day <= ym.lengthOfMonth(); day++) {
+        int col = (startOffset + day - 1) % 7;
+        int row = ((startOffset + day - 1) / 7) + 1;
+
+        LocalDate gridDate = watchDate.withDayOfMonth(day);
+        List<Event> dayEvents = getEventsForDate(gridDate);
+
+   
+        String dayText = String.valueOf(day) + (dayEvents.isEmpty() ? "" : "*");
+        Label lblDay = new Label(dayText);
+        
+     
+        lblDay.setStyle(cliFont);
+        lblDay.setMinWidth(40); 
+        lblDay.setAlignment(Pos.CENTER);
+
+        grid.add(lblDay, col, row);
+
+        for (Event e : dayEvents) {
+            Label detail = new Label("* " + day + ": " + e.getTitle() + " (" + e.getstartDateTime().toLocalTime() + ")");
+            detail.setStyle(cliFont + "-fx-text-fill: #007bbd;");
+            eventDetails.getChildren().add(detail);
+        }
+    }
+
+    calendarLayout.getChildren().addAll(grid, eventDetails);
+    return calendarLayout;
+}
+
+// Helper to find events including recurrence
+private List<Event> getEventsForDate(LocalDate date) {
+    List<Event> result = new ArrayList<>();
+    for (Event e : eventManager.getAllEvent()) {
+        if (e instanceof RecurrentEvent) {
+            RecurrenceManager.generateOccurrences((RecurrentEvent) e).stream()
+                .filter(occ -> occ.getstartDateTime().toLocalDate().equals(date))
+                .forEach(result::add);
+        } else if (e.getstartDateTime().toLocalDate().equals(date)) {
+            result.add(e);
+        }
+    }
+    return result;
+}
     private void addEventLabel(VBox container, Event e) {
         Label eventLabel = new Label("• " + e.getTitle());
         eventLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #007bbd;");

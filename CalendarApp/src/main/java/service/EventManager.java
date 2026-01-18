@@ -8,7 +8,6 @@ import java.util.List;
 
 public class EventManager {
 
-    // Using "data/" is generally safer than "src/data/" for running jars later
     private static final String EVENT_FILE = "data/event.csv"; 
     private final ArrayList<Event> events = new ArrayList<>();
 
@@ -20,7 +19,7 @@ public class EventManager {
         loadEvents();
     }
 
-    // --- REQUIREMENT: loadEvents ---
+    // loadEvents
     public void loadEvents() {
         events.clear();
         File file = new File(EVENT_FILE);
@@ -50,14 +49,12 @@ public class EventManager {
         }
     }
 
-    // --- REQUIREMENT: saveEvents ---
+    // saveEvents
     public void saveEvents() {
         try (PrintWriter pw = new PrintWriter(new FileWriter(EVENT_FILE))) {
             pw.println("eventId,title,description,startDateTime,endDateTime");
 
             for (Event e : events) {
-                // Using the toCSV() method from your Event model is cleaner if available,
-                // otherwise strictly formatting it here ensures safety.
                 pw.println(String.format("%d,%s,%s,%s,%s",
                         e.getId(),
                         e.getTitle(),
@@ -71,7 +68,7 @@ public class EventManager {
         }
     }
 
-    // --- REQUIREMENT: getNextEventId ---
+    // getNextEventId ---
     public int getNextEventId() {
         return events.stream()
                 .mapToInt(Event::getId)
@@ -79,18 +76,18 @@ public class EventManager {
                 .orElse(0) + 1;
     }
 
-    // --- REQUIREMENT: addEvent ---
+    // addEvent ---
     public void addEvent(Event event) {
         events.add(event);
         saveEvents();
     }
 
-    // --- REQUIREMENT: getAllEvent ---
+    // getAllEvent ---
     public List<Event> getAllEvent() {
         return events;
     }
 
-    // --- REQUIREMENT: findEventById ---
+    // findEventById ---
     public Event findEventById(int id) {
         return events.stream()
                 .filter(e -> e.getId() == id)
@@ -98,7 +95,7 @@ public class EventManager {
                 .orElse(null);
     }
 
-    // --- REQUIREMENT: deleteEvent ---
+    // deleteEvent ---
     public boolean deleteEvent(int id) {
         boolean removed = events.removeIf(e -> e.getId() == id);
         if (removed) {
@@ -107,7 +104,7 @@ public class EventManager {
         return removed;
     }
 
-    // --- REQUIREMENT: updateEvent ---
+    // updateEvent ---
     public boolean updateEvent(Event updatedEvent) {
         for (int i = 0; i < events.size(); i++) {
             if (events.get(i).getId() == updatedEvent.getId()) {

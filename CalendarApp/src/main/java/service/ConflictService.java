@@ -9,7 +9,7 @@ public class ConflictService {
 
         for (Event e : existingEvents) {
 
-            // Skip checking against itself (useful during edit)
+            // Skip checking against itself
             if (e.getId() == newEvent.getId()) {
                 continue;
             }
