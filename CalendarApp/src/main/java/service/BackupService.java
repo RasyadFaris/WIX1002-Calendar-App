@@ -29,7 +29,7 @@ public class BackupService {
                 }
             }
         }
-        System.out.println("Backup consolidated to " + backupFile.getAbsolutePath());
+        System.out.println("Backup saved to " + backupFile.getAbsolutePath());
     }
 
     public static void restore(String sourceFolder) throws IOException {
