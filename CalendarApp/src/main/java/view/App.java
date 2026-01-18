@@ -290,33 +290,6 @@ private void printCLI() {
     }
     System.out.println("------------------------------\n");
 }
-
-    private List<Event> getEventsForDate(LocalDate date) {
-        List<Event> result = new ArrayList<>();
-        List<Event> allEvents = eventManager.getAllEvent();
-
-        for (Event e : allEvents) {
-            if (e instanceof RecurrentEvent) {
-                RecurrentEvent re = (RecurrentEvent) e;
-                List<Event> occurrences = RecurrenceManager.generateOccurrences(re);
-                for(Event occ : occurrences) {
-                    if(occ.getstartDateTime().toLocalDate().equals(date)) {
-                        result.add(occ);
-                    }
-                }
-            } else {
-                if (e.getstartDateTime().toLocalDate().equals(date)) {
-                    result.add(e);
-                }
-            }
-        }
-        return result;
-    }
-    private void addEventLabel(VBox container, Event e) {
-        Label eventLabel = new Label("• " + e.getTitle());
-        eventLabel.setStyle("-fx-font-size: 9px; -fx-text-fill: #007bbd;");
-        container.getChildren().add(eventLabel);
-    }
    
     private VBox createAddEventPage(Event eventToEdit) {
         VBox formLayout = new VBox(15);
