@@ -1,10 +1,16 @@
 package service;
 
-import model.Event;
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+
+import model.Event;
 
 public class EventManager {
 
@@ -19,6 +25,8 @@ public class EventManager {
 
     public void loadEvents() {
         events.clear();
+        List<Integer> loadedIds = new ArrayList<>();
+
         File file = new File(EVENT_FILE);
         if (!file.exists()) return;
 
@@ -33,6 +41,12 @@ public class EventManager {
                 if (p.length < 5) continue; 
 
                 int id = Integer.parseInt(p[0].trim());
+
+                if (loadedIds.contains(id)) {
+                    continue; 
+                }
+                loadedIds.add(id);
+
                 String title = p[1].trim();
                 String desc = p[2].trim();
                 LocalDateTime start = LocalDateTime.parse(p[3].trim());
@@ -59,7 +73,6 @@ public class EventManager {
             pw.println("eventId,title,description,startDateTime,endDateTime,reminderMinutes");
 
             for (Event e : events) {
-                // Use the toCSV() method in Event class
                 pw.println(e.toCSV());
             }
         } catch (IOException e) {
