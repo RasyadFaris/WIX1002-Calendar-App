@@ -225,11 +225,11 @@ public class App extends Application {
     
         // Grid Alignment Logic
         YearMonth ym = YearMonth.of(watchDate.getYear(), watchDate.getMonth());
-        int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue();
+        int startOffset = watchDate.withDayOfMonth(1).getDayOfWeek().getValue() % 7;
         if (startOffset == 7) startOffset = 0; 
         
         for (int i = 0; i < startOffset; i++) {
-            System.out.print("   ");
+            System.out.print("    ");
         }
     
         List<String> eventDetails = new ArrayList<>();
