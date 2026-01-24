@@ -1,8 +1,5 @@
 ---START:event.csv---
 eventId,title,description,startDateTime,endDateTime,reminderMinutes
-1,CoMath,Tutorial,2026-01-19T09:00:00,2026-01-19T10:00:00,0
-2,FoP,Tutorial,2026-01-19T11:00:00,2026-01-19T14:00:00,10000
-3,FoP,Lecture,2026-01-20T10:00:00,2026-01-20T12:00:00,10000
 ---END:event.csv---
 ---START:recurrent.csv---
 eventId,recurrentInterval,recurrentTimes,recurrentEndDate
